@@ -1,0 +1,69 @@
+{
+ "app": "company",
+ "charts": [
+  {
+   "chart_name": "Customer",
+   "label": "Customer"
+  },
+  {
+   "chart_name": "Estimations",
+   "label": "Estimations"
+  }
+ ],
+ "content": "[{\"id\":\"e_JxZxBhBx\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"AsOcZsZl-X\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Leads\",\"col\":4}},{\"id\":\"nhNnPHiSVe\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Customer\",\"col\":4}},{\"id\":\"7bQlqf5VQm\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice\",\"col\":4}},{\"id\":\"gHivb8vkUr\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MqzvI6fVm3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"q6OAO_ktuO\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Estimation and Invoice Cards\",\"col\":12}},{\"id\":\"NajRCtqwMp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ZCmqUk_KP3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Customer\",\"col\":6}},{\"id\":\"Q_f-wKIAdO\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Estimations\",\"col\":6}},{\"id\":\"xNmFwJ5N6q\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "creation": "2025-11-17 15:23:45.974850",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Sales Estimation and Invoice Cards",
+   "label": "Sales Estimation and Invoice Cards"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "home",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Sales Dashboard",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-31 15:37:48.516049",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Sales Dashboard",
+ "number_cards": [
+  {
+   "label": "Customer",
+   "number_card_name": "Customer"
+  },
+  {
+   "label": "Invoice",
+   "number_card_name": "Invoice"
+  },
+  {
+   "label": "Leads",
+   "number_card_name": "Leads"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  },
+  {
+   "role": "Sales Employee"
+  },
+  {
+   "role": "Sales Employee Junior"
+  }
+ ],
+ "sequence_id": 28.0,
+ "shortcuts": [],
+ "title": "Sales Dashboard",
+ "type": "Workspace"
+}

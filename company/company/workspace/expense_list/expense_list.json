@@ -1,0 +1,40 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Expense List\"}}]",
+ "creation": "2025-10-13 11:11:34.979850",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "tag",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Expense List",
+ "link_to": "Expenses",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-29 17:47:38.818946",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Expense List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  },
+  {
+   "role": "Sales Employee"
+  }
+ ],
+ "sequence_id": 36.0,
+ "shortcuts": [],
+ "title": "Expense List",
+ "type": "Link"
+}

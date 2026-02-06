@@ -1,0 +1,109 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "format:TASK-{#####}",
+    "creation": "2025-12-05 12:55:16.634691",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "task_information_section",
+        "task_owner",
+        "subject",
+        "priority",
+        "column_break_pdqi",
+        "due_date",
+        "status",
+        "reminder",
+        "repeat_reminder",
+        "section_break_zoyk",
+        "description"
+    ],
+    "fields": [
+        {
+            "fieldname": "task_information_section",
+            "label": "Task Information",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "task_owner",
+            "label": "Task Owner",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "subject",
+            "label": "Subject",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "priority",
+            "label": "Priority",
+            "fieldtype": "Select",
+            "options": "High\nHighest\nLow\nLowest\nNormal"
+        },
+        {
+            "fieldname": "column_break_pdqi",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "due_date",
+            "label": "Due Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "status",
+            "label": "Status",
+            "fieldtype": "Select",
+            "options": "Not Started\nDeferred\nIn Progress\nCompleted\nWaiting for input"
+        },
+        {
+            "default": "0",
+            "fieldname": "reminder",
+            "label": "Reminder",
+            "fieldtype": "Check"
+        },
+        {
+            "default": "0",
+            "fieldname": "repeat_reminder",
+            "label": "Repeat Reminder",
+            "fieldtype": "Check"
+        },
+        {
+            "fieldname": "section_break_zoyk",
+            "label": "Description Information",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "description",
+            "label": "Description",
+            "fieldtype": "Small Text"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2025-12-05 12:55:51.105826",
+    "modified_by": "Administrator",
+    "module": "Company",
+    "name": "Tasks",
+    "naming_rule": "Expression",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "rows_threshold_for_grid_search": 20,
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": []
+}

@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"id\":\"hnstcnfR7M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Job Applicant List</span>\",\"col\":12}}]",
+ "creation": "2025-12-01 11:17:44.787934",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "file",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Job Applicant List",
+ "link_to": "Job Applicant",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-01 11:22:25.480909",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Job Applicant List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Recruitment",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 48.0,
+ "shortcuts": [],
+ "title": "Job Applicant List",
+ "type": "Link"
+}

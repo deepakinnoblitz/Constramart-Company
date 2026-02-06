@@ -1,0 +1,38 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Attendance Report\"}}]",
+ "creation": "2025-10-10 15:50:45.491365",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": "https://erp.innoblitz.in/app/query-report/Monthly%20Attendance%20Report?month=October&year=2025",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "mail",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Attendance Report",
+ "link_to": "Monthly Attendance Report",
+ "link_type": "Report",
+ "links": [],
+ "modified": "2025-10-10 17:30:11.378169",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Attendance Report",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 37.0,
+ "shortcuts": [],
+ "title": "Attendance Report",
+ "type": "URL"
+}

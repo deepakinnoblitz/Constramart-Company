@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Salary Slips\"}}]",
+ "creation": "2025-10-08 12:35:22.666959",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "clipboard",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Salary Slips",
+ "link_to": "Salary Slip",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-10-08 12:35:41.059293",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Salary Slips",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 35.0,
+ "shortcuts": [],
+ "title": "Salary Slips",
+ "type": "Link"
+}

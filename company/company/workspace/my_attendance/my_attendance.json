@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"My Attendance\"}}]",
+ "creation": "2025-09-30 17:06:02.158845",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "crm",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "My Attendance",
+ "link_to": "Attendance",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-10-08 11:54:45.872744",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "My Attendance",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Employee"
+  }
+ ],
+ "sequence_id": 27.0,
+ "shortcuts": [],
+ "title": "My Attendance",
+ "type": "Link"
+}

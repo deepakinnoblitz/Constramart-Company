@@ -1,0 +1,274 @@
+{
+ "actions": [],
+ "autoname": "field:ref_no",
+ "creation": "2025-09-18 16:51:38.529613",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ref_no",
+  "business_person",
+  "estimation_details_section",
+  "client_name",
+  "billing_name",
+  "billing_address",
+  "column_break_nfoe",
+  "customer_name",
+  "estimate_date",
+  "status",
+  "section_break_tax",
+  "column_break_hiag",
+  "default_tax_type",
+  "section_break_wbpo",
+  "table_qecz",
+  "section_break_mzdp",
+  "attachments",
+  "description",
+  "terms_and_conditions",
+  "bank_account",
+  "column_break_ofbd",
+  "total_amount",
+  "total_qty",
+  "overall_discount_type",
+  "overall_discount",
+  "roundoff",
+  "grand_total",
+  "section_break_umzp",
+  "owner_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "client_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer ID",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "client_name.company_name",
+   "fieldname": "billing_name",
+   "fieldtype": "Data",
+   "label": "Billing Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nfoe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ref_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ref no",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "estimate_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Estimate Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_wbpo",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "table_qecz",
+   "fieldtype": "Table",
+   "label": "Estimation Items",
+   "options": "Estimation Items"
+  },
+  {
+   "fieldname": "section_break_mzdp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "overall_discount_type",
+   "fieldtype": "Select",
+   "label": " Overall Discount Type",
+   "options": "\nFlat\nPercentage"
+  },
+  {
+   "fieldname": "overall_discount",
+   "fieldtype": "Float",
+   "label": " Overall Discount",
+   "precision": "2"
+  },
+  {
+   "fieldname": "roundoff",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Round Off",
+   "precision": "2"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Float",
+   "label": "Grand Total",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_ofbd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "estimation_details_section",
+   "fieldtype": "Section Break",
+   "label": "Estimation Details"
+  },
+  {
+   "fieldname": "total_qty",
+   "fieldtype": "Float",
+   "label": "Total Quantity",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Float",
+   "label": "Total Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "client_name.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "client_name.billing_address",
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Billing Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Bank Account",
+   "options": "Company Bank Account"
+  },
+  {
+   "fieldname": "terms_and_conditions",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Terms and Conditions"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Attach",
+   "label": "Attachments"
+  },
+  {
+   "fieldname": "section_break_umzp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "__user",
+   "fieldname": "owner_name",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Handled By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nIn Process\nConverted\nCustomer Rejected"
+  },
+  {
+   "fieldname": "section_break_tax",
+   "fieldtype": "Section Break",
+   "label": "Tax Settings"
+  },
+  {
+   "fieldname": "default_tax_type",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Default Tax Type",
+   "options": "Tax Types",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hiag",
+   "fieldtype": "Column Break",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "business_person",
+   "fieldtype": "Link",
+   "label": "Business person",
+   "options": "Business Person"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-03 16:43:21.625915",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Estimation",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "IT",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

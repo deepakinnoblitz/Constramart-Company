@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:DEAL-{YYYY}-{#####}",
+ "creation": "2025-12-04 11:52:29.749650",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "deal_details",
+  "deal_title",
+  "account",
+  "contact",
+  "type",
+  "source_lead",
+  "next_step",
+  "column_break",
+  "value",
+  "expected_close_date",
+  "stage",
+  "probability",
+  "notes",
+  "section_break_eswa",
+  "deal_owner"
+ ],
+ "fields": [
+  {
+   "fieldname": "deal_details",
+   "fieldtype": "Section Break",
+   "label": "Deal Details"
+  },
+  {
+   "fieldname": "deal_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Deal Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "label": "Contact",
+   "options": "Contacts"
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Currency",
+   "label": "Deal Value",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expected_close_date",
+   "fieldtype": "Date",
+   "label": "Expected Close Date"
+  },
+  {
+   "fieldname": "column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "label": "Stage",
+   "options": "Qualification\nNeeds Analysis\nMeeting Scheduled\nProposal Sent\nNegotiation\nClosed Won\nClosed Lost",
+   "reqd": 1
+  },
+  {
+   "fieldname": "probability",
+   "fieldtype": "Percent",
+   "label": "Probability"
+  },
+  {
+   "default": "__user",
+   "fieldname": "deal_owner",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Owner",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_lead",
+   "fieldtype": "Link",
+   "label": "Source Lead",
+   "options": "Lead"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Account",
+   "options": "Accounts",
+   "reqd": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Existing Business\nNew Business"
+  },
+  {
+   "fieldname": "next_step",
+   "fieldtype": "Small Text",
+   "label": "Next Step"
+  },
+  {
+   "fieldname": "section_break_eswa",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-19 13:58:30.167731",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Deal",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

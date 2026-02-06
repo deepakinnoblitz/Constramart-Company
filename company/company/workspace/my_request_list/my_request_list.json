@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"My Request List\"}}]",
+ "creation": "2025-11-11 17:53:31.856129",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "list-alt",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "My Request List",
+ "link_to": "Request",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-11 17:54:32.466605",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "My Request List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Employee"
+  }
+ ],
+ "sequence_id": 37.0,
+ "shortcuts": [],
+ "title": "My Request List",
+ "type": "Link"
+}

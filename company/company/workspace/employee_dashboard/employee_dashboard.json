@@ -1,0 +1,69 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"id\":\"LoZ-E2VG-V\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Announcement\",\"col\":12}},{\"id\":\"VGEIf8mpKc\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Weekly Working Hours - Updated\",\"col\":12}},{\"id\":\"qWcruZzjS2\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Leave Status\",\"col\":12}},{\"id\":\"Jc2tQU6oo2\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Weekly Attendance Updated 2\",\"col\":6}},{\"id\":\"0S7tOr3xt5\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Month Calendar\",\"col\":6}},{\"id\":\"xMelcZdkjG\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Today Birthday\",\"col\":6}},{\"id\":\"hgZSmer1Zk\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Today Leave\",\"col\":6}},{\"id\":\"7Bhp3AKUBH\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Missing Timesheet\",\"col\":12}},{\"id\":\"kCa0D97cOc\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"LSB319Ltuh\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "creation": "2025-09-30 15:56:05.201442",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Today Leave",
+   "label": "Today Leave"
+  },
+  {
+   "custom_block_name": "Month Calendar",
+   "label": "Month Calendar"
+  },
+  {
+   "custom_block_name": "Weekly Attendance Updated 2",
+   "label": "Weekly Attendance Updated 2"
+  },
+  {
+   "custom_block_name": "Announcement",
+   "label": "Announcement"
+  },
+  {
+   "custom_block_name": "Leave Status",
+   "label": "Leave Status"
+  },
+  {
+   "custom_block_name": "Weekly Working Hours - Updated",
+   "label": "Weekly Working Hours - Updated"
+  },
+  {
+   "custom_block_name": "Missing Timesheet",
+   "label": "Missing Timesheet"
+  },
+  {
+   "custom_block_name": "Today Birthday",
+   "label": "Today Birthday"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "home",
+ "idx": 1,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Employee Dashboard",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-30 14:34:00.904148",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Employee Dashboard",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Employee"
+  }
+ ],
+ "sequence_id": 1.0,
+ "shortcuts": [],
+ "title": "Employee Dashboard",
+ "type": "Workspace"
+}

@@ -1,0 +1,43 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Leads List\"}}]",
+ "creation": "2025-10-13 11:09:57.454231",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "arrow-down-left",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Leads List",
+ "link_to": "Leads",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-24 12:34:03.539915",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Leads List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  },
+  {
+   "role": "Sales Employee"
+  },
+  {
+   "role": "Sales Employee Junior"
+  }
+ ],
+ "sequence_id": 31.0,
+ "shortcuts": [],
+ "title": "Leads List",
+ "type": "Link"
+}

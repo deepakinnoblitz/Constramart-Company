@@ -1,0 +1,170 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "PURC.#####",
+ "creation": "2025-12-29 11:28:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "purchase_details_section",
+  "purchase",
+  "vendor_name",
+  "column_break_yvpi",
+  "vendor_id",
+  "section_break_fiph",
+  "business_person",
+  "section_break_svph",
+  "payment_date",
+  "mode_of_payment",
+  "column_break_wmma",
+  "amount_to_pay",
+  "amount_paid",
+  "amount_pending",
+  "section_break_ybiw",
+  "remarks",
+  "section_break_ders",
+  "owner_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "purchase",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Purchase",
+   "options": "Purchase",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "purchase.vendor_id",
+   "fieldname": "vendor_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Vendor ID",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "purchase.vendor_name",
+   "fieldname": "vendor_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Vendor Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount_paid",
+   "fieldtype": "Currency",
+   "label": "Amount Paid",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Mode of Payment",
+   "options": "Payment Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amount_pending",
+   "fieldtype": "Currency",
+   "label": "Amount Pending",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_to_pay",
+   "fieldtype": "Currency",
+   "label": "Amount to Pay",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wmma",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ybiw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_svph",
+   "fieldtype": "Section Break",
+   "label": "Payment Information"
+  },
+  {
+   "fieldname": "purchase_details_section",
+   "fieldtype": "Section Break",
+   "label": "Purchase Details"
+  },
+  {
+   "fieldname": "column_break_yvpi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ders",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "__user",
+   "fieldname": "owner_name",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Handled By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_fiph",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "business_person",
+   "fieldtype": "Link",
+   "label": "Business Person",
+   "options": "Business Person"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-28 18:27:58.527261",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Purchase Collection",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2025-09-18 16:58:04.494970",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "service",
+  "brand",
+  "hsn_code",
+  "description",
+  "quantity",
+  "price",
+  "discount_type",
+  "discount",
+  "tax_type",
+  "tax_category",
+  "tax_percent",
+  "tax_amount",
+  "cgst",
+  "sgst",
+  "igst",
+  "sub_total"
+ ],
+ "fields": [
+  {
+   "fieldname": "service",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Service",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hsn_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "HSN Code"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity",
+   "precision": "0"
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Price",
+   "precision": "2"
+  },
+  {
+   "fieldname": "discount_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Discount Type",
+   "options": "Select Discount Type\nFlat\nPercentage"
+  },
+  {
+   "fieldname": "discount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Discount",
+   "precision": "2"
+  },
+  {
+   "fieldname": "tax_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Tax Type",
+   "options": "Tax Types",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Tax Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sub_total",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Sub Total",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "tax_type.tax_type",
+   "fieldname": "tax_category",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Tax Category",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "tax_type.tax_percentage",
+   "fieldname": "tax_percent",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Tax Percentage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cgst",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "CGST",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sgst",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "SGST",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "igst",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "IGST",
+   "read_only": 1
+  },
+  {
+   "fieldname": "brand",
+   "fieldtype": "Data",
+   "label": "Brand"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-08 12:48:35.909395",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Estimation Items",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

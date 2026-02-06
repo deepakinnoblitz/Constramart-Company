@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Meeting Report\"}}]",
+ "creation": "2025-12-19 16:23:31.483136",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": "http://erp.localhost.innoblitz:8011/app/query-report/Meeting%20Report",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "file",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Meeting Report",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-19 16:23:49.057054",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Meeting Report",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Reports",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 80.0,
+ "shortcuts": [],
+ "title": "Meeting Report",
+ "type": "URL"
+}

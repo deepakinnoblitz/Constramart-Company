@@ -1,0 +1,54 @@
+{
+ "app": "company",
+ "charts": [
+  {
+   "chart_name": "Leads",
+   "label": "Leads"
+  },
+  {
+   "chart_name": "Deals",
+   "label": "Deals"
+  }
+ ],
+ "content": "[{\"id\":\"aRY7SeQUjp\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Calls\",\"col\":4}},{\"id\":\"6SpJUpLxYD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Today Meeting\",\"col\":4}},{\"id\":\"GAdPtJ57uA\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Leads\",\"col\":6}},{\"id\":\"lMea910Cjq\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Deals\",\"col\":6}}]",
+ "creation": "2025-12-04 12:32:58.350807",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "home",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "CRM Dashboard",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-01-07 12:03:44.478122",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "CRM Dashboard",
+ "number_cards": [
+  {
+   "label": "Calls",
+   "number_card_name": "Calls"
+  },
+  {
+   "label": "Today Meeting",
+   "number_card_name": "Today Meeting"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 46.0,
+ "shortcuts": [],
+ "title": "CRM Dashboard",
+ "type": "Workspace"
+}

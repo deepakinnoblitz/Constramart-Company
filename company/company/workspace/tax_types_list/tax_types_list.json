@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Tax Types List\"}}]",
+ "creation": "2025-12-31 15:58:49.363219",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "income",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Tax Types List",
+ "link_to": "Tax Types",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-31 15:59:08.356484",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Tax Types List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Masters",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  }
+ ],
+ "sequence_id": 90.0,
+ "shortcuts": [],
+ "title": "Tax Types List",
+ "type": "Link"
+}

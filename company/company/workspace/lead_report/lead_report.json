@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Lead Report\"}}]",
+ "creation": "2025-12-19 14:55:06.024230",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": "http://erp.localhost.innoblitz:8011/app/query-report/Lead",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "projects",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Lead Report",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-19 14:58:06.350044",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Lead Report",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Reports",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 76.0,
+ "shortcuts": [],
+ "title": "Lead Report",
+ "type": "URL"
+}

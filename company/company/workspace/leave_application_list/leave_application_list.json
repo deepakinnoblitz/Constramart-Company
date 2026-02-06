@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Leave Application List\"}}]",
+ "creation": "2025-10-08 12:28:35.246964",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "list-alt",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Leave Application List",
+ "link_to": "Leave Application",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-10-08 12:33:28.426360",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Leave Application List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 32.0,
+ "shortcuts": [],
+ "title": "Leave Application List",
+ "type": "Link"
+}

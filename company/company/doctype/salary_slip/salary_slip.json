@@ -1,0 +1,343 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "SS.#####",
+ "creation": "2025-09-24 17:32:05.040177",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_details_section",
+  "employee",
+  "employee_name",
+  "department",
+  "designation",
+  "date_of_joining",
+  "column_break_jhpx",
+  "pf_no",
+  "esi_no",
+  "bank_name",
+  "account_no",
+  "email",
+  "personal_email",
+  "section_break_ieza",
+  "basic_pay",
+  "hra",
+  "conveyance_allowances",
+  "medical_allowances",
+  "other_allowances",
+  "column_break_aqlf",
+  "pf",
+  "health_insurance",
+  "professional_tax",
+  "loan_recovery",
+  "lop",
+  "section_break_qugv",
+  "column_break_egim",
+  "pay_period_start",
+  "pay_period_end",
+  "no_of_leave",
+  "total_working_days",
+  "lop_days",
+  "no_of_paid_leave",
+  "total_deduction",
+  "column_break_fbbu",
+  "gross_pay",
+  "grand_gross_pay",
+  "net_pay",
+  "grand_net_pay",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "pay_period_start",
+   "fieldtype": "Date",
+   "label": "Pay Period Start",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pay_period_end",
+   "fieldtype": "Date",
+   "label": "Pay Period End",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gross_pay",
+   "fieldtype": "Currency",
+   "label": "Gross Pay",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "net_pay",
+   "fieldtype": "Currency",
+   "label": "Net Pay",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_gross_pay",
+   "fieldtype": "Currency",
+   "label": "Gross Pay After Attendance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "no_of_leave",
+   "fieldtype": "Float",
+   "label": "No of Leave",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_net_pay",
+   "fieldtype": "Currency",
+   "label": "Grand Net Pay",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "no_of_paid_leave",
+   "fieldtype": "Float",
+   "label": "No of Paid Leave",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Data",
+   "label": "Department",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "designation",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_egim",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "employee.date_of_joining",
+   "fieldname": "date_of_joining",
+   "fieldtype": "Data",
+   "label": "Date of Joining",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.pf_number",
+   "fieldname": "pf_no",
+   "fieldtype": "Data",
+   "label": "PF No",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.esi_no",
+   "fieldname": "esi_no",
+   "fieldtype": "Data",
+   "label": "ESI No",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.bank_name",
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.bank_account",
+   "fieldname": "account_no",
+   "fieldtype": "Data",
+   "label": "Account No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_ieza",
+   "fieldtype": "Section Break",
+   "label": "Salary Components"
+  },
+  {
+   "fetch_from": "employee.basic_pay",
+   "fieldname": "basic_pay",
+   "fieldtype": "Currency",
+   "label": "Basic Pay",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.hra",
+   "fieldname": "hra",
+   "fieldtype": "Currency",
+   "label": "HRA",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.conveyance_allowances",
+   "fieldname": "conveyance_allowances",
+   "fieldtype": "Currency",
+   "label": "Conveyance Allowances",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.medical_allowances",
+   "fieldname": "medical_allowances",
+   "fieldtype": "Currency",
+   "label": "Medical Allowances",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.other_allowances",
+   "fieldname": "other_allowances",
+   "fieldtype": "Currency",
+   "label": "Other Allowances",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.pf",
+   "fieldname": "pf",
+   "fieldtype": "Currency",
+   "label": "EPF",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.health_insurance",
+   "fieldname": "health_insurance",
+   "fieldtype": "Currency",
+   "label": "ESI/Health Insurance",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.professional_tax",
+   "fieldname": "professional_tax",
+   "fieldtype": "Currency",
+   "label": "Professional Tax",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.loan_recovery",
+   "fieldname": "loan_recovery",
+   "fieldtype": "Currency",
+   "label": "Loan Recovery",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_aqlf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_jhpx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_qugv",
+   "fieldtype": "Section Break",
+   "label": "Salary Details"
+  },
+  {
+   "fieldname": "column_break_fbbu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_details_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Details"
+  },
+  {
+   "fieldname": "lop",
+   "fieldtype": "Currency",
+   "label": "LOP",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_deduction",
+   "fieldtype": "Currency",
+   "label": "Total Deduction",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_working_days",
+   "fieldtype": "Float",
+   "label": "Total Working Days",
+   "precision": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lop_days",
+   "fieldtype": "Float",
+   "label": "LOP Days",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.email",
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fetch_from": "employee.personal_email",
+   "fieldname": "personal_email",
+   "fieldtype": "Data",
+   "label": "Personal Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Salary Slip",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-20 17:10:47.447141",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Salary Slip",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

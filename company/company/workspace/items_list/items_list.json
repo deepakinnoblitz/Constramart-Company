@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Items List\"}}]",
+ "creation": "2025-12-29 12:41:57.100388",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "stock",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Items List",
+ "link_to": "Item",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-29 12:42:37.584751",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Items List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Masters",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  }
+ ],
+ "sequence_id": 83.0,
+ "shortcuts": [],
+ "title": "Items List",
+ "type": "Link"
+}

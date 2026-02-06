@@ -1,0 +1,36 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"id\":\"DU4MJ039h6\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads Module</span>\",\"col\":12}}]",
+ "creation": "2025-12-11 17:29:30.054384",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "share",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Leads Module",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-01-08 12:54:40.496280",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Leads Module",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 47.0,
+ "shortcuts": [],
+ "title": "Leads Module",
+ "type": "Workspace"
+}

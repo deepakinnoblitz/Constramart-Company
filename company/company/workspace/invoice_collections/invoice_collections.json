@@ -1,0 +1,40 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Invoice Collections\"}}]",
+ "creation": "2025-10-13 11:03:36.200752",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "money-coins-1",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Invoice Collections",
+ "link_to": "Invoice Collection",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-24 11:34:36.362882",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Invoice Collections",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  },
+  {
+   "role": "Sales Employee"
+  }
+ ],
+ "sequence_id": 34.0,
+ "shortcuts": [],
+ "title": "Invoice Collections",
+ "type": "Link"
+}

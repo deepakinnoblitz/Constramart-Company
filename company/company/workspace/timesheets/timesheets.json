@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Timesheets\"}}]",
+ "creation": "2025-11-03 16:10:04.709627",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "sort-descending",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Timesheets",
+ "link_to": "Timesheet",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-03 16:10:28.254780",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Timesheets",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 35.0,
+ "shortcuts": [],
+ "title": "Timesheets",
+ "type": "Link"
+}

@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Calls Report\"}}]",
+ "creation": "2025-12-19 16:12:08.519734",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": "http://erp.localhost.innoblitz:8011/app/query-report/Calls%20Report",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "small-file",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Calls Report",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-19 16:12:38.594270",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Calls Report",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Reports",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 79.0,
+ "shortcuts": [],
+ "title": "Calls Report",
+ "type": "URL"
+}

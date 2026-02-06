@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"id\":\"nnSQh2R-YL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Announcements</span>\",\"col\":12}}]",
+ "creation": "2025-10-08 12:37:20.183933",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "small-message",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Announcements",
+ "link_to": "Announcement",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-20 11:14:18.372385",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Announcements",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 19.0,
+ "shortcuts": [],
+ "title": "Announcements",
+ "type": "Link"
+}

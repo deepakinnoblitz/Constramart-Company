@@ -1,0 +1,376 @@
+{
+ "actions": [],
+ "autoname": "field:ref_no",
+ "creation": "2025-09-19 10:58:13.523840",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ref_no",
+  "purchase_id",
+  "business_person_name",
+  "invoice_details_section",
+  "customer_id",
+  "billing_address",
+  "location",
+  "column_break_nfoe",
+  "customer_name",
+  "billing_name",
+  "phone_number",
+  "section_break_taha",
+  "invoice_date",
+  "payment_terms",
+  "due_date",
+  "column_break_rtdz",
+  "po_no",
+  "po_date",
+  "company_name",
+  "section_break_iipw",
+  "converted_estimation_id",
+  "column_break_vkpy",
+  "converted_from_estimation",
+  "section_break_tax",
+  "column_break_coql",
+  "default_tax_type",
+  "section_break_wbpo",
+  "table_qecz",
+  "section_break_mzdp",
+  "attachments",
+  "description",
+  "bank_account",
+  "terms_and_conditions",
+  "column_break_ofbd",
+  "total_amount",
+  "total_qty",
+  "overall_discount_type",
+  "overall_discount",
+  "roundoff",
+  "grand_total",
+  "received_amount",
+  "balance_amount",
+  "section_break_jkow",
+  "owner_name"
+ ],
+ "fields": [
+  {
+   "fetch_from": "customer_id.company_name",
+   "fieldname": "billing_name",
+   "fieldtype": "Data",
+   "label": "Billing Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nfoe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ref_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ref no",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "section_break_wbpo",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "table_qecz",
+   "fieldtype": "Table",
+   "label": "Invoice Items",
+   "options": "Invoice Items"
+  },
+  {
+   "fieldname": "section_break_mzdp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "overall_discount_type",
+   "fieldtype": "Select",
+   "label": " Overall Discount Type",
+   "options": "\nFlat\nPercentage"
+  },
+  {
+   "fieldname": "overall_discount",
+   "fieldtype": "Float",
+   "label": " Overall Discount",
+   "precision": "2"
+  },
+  {
+   "fieldname": "roundoff",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Round Off",
+   "precision": "2"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Float",
+   "label": "Grand Total",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_ofbd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_details_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Details"
+  },
+  {
+   "fieldname": "total_qty",
+   "fieldtype": "Float",
+   "label": "Total Quantity",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Float",
+   "label": "Total Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Invoice Date",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "customer_id.phone_number",
+   "fieldname": "phone_number",
+   "fieldtype": "Phone",
+   "label": "Phone Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_terms",
+   "fieldtype": "Select",
+   "label": "Payment Terms",
+   "options": "Select Payment terms\nNext day Payment\nDue On Receipt\n15 days\n30 days\n60 days\n1 Year"
+  },
+  {
+   "fieldname": "po_no",
+   "fieldtype": "Data",
+   "label": "DC No"
+  },
+  {
+   "fieldname": "po_date",
+   "fieldtype": "Date",
+   "label": "DC Date"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "mandatory_depends_on": "eval:doc.payment_terms==\"Due On Receipt\";"
+  },
+  {
+   "fieldname": "received_amount",
+   "fieldtype": "Float",
+   "label": "Received Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_amount",
+   "fieldtype": "Float",
+   "label": "Balance Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_iipw",
+   "fieldtype": "Section Break",
+   "label": "Converted from Estimation Details"
+  },
+  {
+   "fieldname": "converted_estimation_id",
+   "fieldtype": "Data",
+   "label": "Converted Estimation ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vkpy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "converted_from_estimation",
+   "fieldtype": "Check",
+   "label": "Converted from Estimation"
+  },
+  {
+   "fetch_from": "customer_id.billing_address",
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Billing Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_taha",
+   "fieldtype": "Section Break",
+   "label": "Invoice Details"
+  },
+  {
+   "fieldname": "column_break_rtdz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Attach",
+   "label": "Attachments"
+  },
+  {
+   "default": "BACC00001",
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Bank Account",
+   "options": "Company Bank Account"
+  },
+  {
+   "fieldname": "terms_and_conditions",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Terms and Conditions"
+  },
+  {
+   "fetch_from": "customer_id.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "customer_id.location",
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_id",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Customer ID",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_jkow",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "__user",
+   "fieldname": "owner_name",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Handled By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_tax",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Tax Settings",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_tax_type",
+   "fieldtype": "Link",
+   "label": "Default Tax Type",
+   "options": "Tax Types",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company Name",
+   "options": "Company Name"
+  },
+  {
+   "fieldname": "purchase_id",
+   "fieldtype": "Link",
+   "label": "Purchase ID",
+   "options": "Purchase"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "business_person_name",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Business Person",
+   "options": "Business Person"
+  },
+  {
+   "fieldname": "column_break_coql",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-03 16:42:54.726812",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Invoice",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "IT",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

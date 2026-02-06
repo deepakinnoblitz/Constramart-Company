@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Business Person List\"}}]",
+ "creation": "2026-02-03 14:38:20.729008",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "share",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Business Person List",
+ "link_to": "Business Person",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-02-03 14:39:17.581063",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Business Person List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Masters",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Sales"
+  }
+ ],
+ "sequence_id": 93.0,
+ "shortcuts": [],
+ "title": "Business Person List",
+ "type": "Link"
+}

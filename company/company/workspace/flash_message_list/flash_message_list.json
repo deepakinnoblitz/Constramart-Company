@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Flash Message List\"}}]",
+ "creation": "2025-11-20 11:13:41.770582",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "mail",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Flash Message List",
+ "link_to": "Flash Message",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-20 11:14:00.419815",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Flash Message List",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 40.0,
+ "shortcuts": [],
+ "title": "Flash Message List",
+ "type": "Link"
+}

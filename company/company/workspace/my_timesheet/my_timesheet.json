@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"My Timesheet\"}}]",
+ "creation": "2025-10-01 10:24:50.494448",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "project",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "My Timesheet",
+ "link_to": "Timesheet",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-10-08 11:48:15.950611",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "My Timesheet",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Employee"
+  }
+ ],
+ "sequence_id": 28.0,
+ "shortcuts": [],
+ "title": "My Timesheet",
+ "type": "Link"
+}

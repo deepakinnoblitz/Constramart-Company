@@ -1,0 +1,182 @@
+{
+ "actions": [],
+ "autoname": "INVC.#####",
+ "creation": "2025-09-20 12:40:45.095523",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "invoice_details_section",
+  "invoice",
+  "customer_name",
+  "column_break_yvpi",
+  "customer_id",
+  "company_name",
+  "section_break_shlr",
+  "business_person",
+  "section_break_svph",
+  "collection_date",
+  "mode_of_payment",
+  "is_advance",
+  "column_break_wmma",
+  "amount_to_pay",
+  "amount_collected",
+  "amount_pending",
+  "section_break_ybiw",
+  "remarks",
+  "section_break_homd",
+  "owner_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Invoice",
+   "options": "Invoice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "collection_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Collection Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount_collected",
+   "fieldtype": "Currency",
+   "label": "Amount Collected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Mode of Payment",
+   "options": "Payment Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amount_pending",
+   "fieldtype": "Currency",
+   "label": "Amount Pending",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_to_pay",
+   "fieldtype": "Currency",
+   "label": "Amount to Pay",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wmma",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ybiw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "invoice.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "invoice.billing_name",
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_svph",
+   "fieldtype": "Section Break",
+   "label": "Invoice Collection Information"
+  },
+  {
+   "fieldname": "invoice_details_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Details"
+  },
+  {
+   "fieldname": "column_break_yvpi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_homd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "__user",
+   "fieldname": "owner_name",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Handled By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "invoice.customer_id",
+   "fieldname": "customer_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer ID",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_advance",
+   "fieldtype": "Check",
+   "label": "Is Advance"
+  },
+  {
+   "fieldname": "section_break_shlr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "business_person",
+   "fieldtype": "Link",
+   "label": "Business Person",
+   "options": "Business Person"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-28 18:25:35.211565",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Invoice Collection",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

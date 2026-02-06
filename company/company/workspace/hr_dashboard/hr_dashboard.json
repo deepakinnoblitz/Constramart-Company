@@ -1,0 +1,75 @@
+{
+ "app": "company",
+ "charts": [
+  {
+   "chart_name": "Missing Attendance",
+   "label": "Missing Attendance"
+  },
+  {
+   "chart_name": "Weekly Present Count",
+   "label": "Weekly Present Count"
+  }
+ ],
+ "content": "[{\"id\":\"ElO0KAT3l1\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Announcement\",\"col\":12}},{\"id\":\"R8r0XqMA-5\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"-BjsK7oTVs\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Employee\",\"col\":6}},{\"id\":\"u3qxZpEl_k\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Leave Application\",\"col\":6}},{\"id\":\"Y9pUjqMmD5\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pCPPRDTG_c\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"2VgKLnBhxT\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Missing Attendance\",\"col\":6}},{\"id\":\"eag5bMHFG7\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Weekly Present Count\",\"col\":6}},{\"id\":\"guO9Zs7Lio\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"I6AEY2RAAJ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"3riJr6kNwY\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Today Leave\",\"col\":12}},{\"id\":\"2GgTZb0o-J\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"NtQozycll_\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"HSYGLzEYj8\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Today Birthday\",\"col\":12}},{\"id\":\"RypPfkh5na\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"WYbxlJIalx\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"SLDNAMJri5\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Renewal Tracker\",\"col\":12}},{\"id\":\"y-MfRQk_Ci\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"lQsgIiUYNh\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"iBZ3YZ6f8y\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Month Calendar\",\"col\":12}}]",
+ "creation": "2025-10-08 11:46:31.865089",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Announcement",
+   "label": "Announcement"
+  },
+  {
+   "custom_block_name": "Today Leave",
+   "label": "Today Leave"
+  },
+  {
+   "custom_block_name": "Month Calendar",
+   "label": "Month Calendar"
+  },
+  {
+   "custom_block_name": "Renewal Tracker",
+   "label": "Renewal Tracker"
+  },
+  {
+   "custom_block_name": "Today Birthday",
+   "label": "Today Birthday"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "home",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "HR Dashboard",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-11-28 12:11:07.204140",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "HR Dashboard",
+ "number_cards": [
+  {
+   "label": "Employee",
+   "number_card_name": "Employee"
+  },
+  {
+   "label": "Pending Leave Application",
+   "number_card_name": "Pending Leave Application"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR"
+  }
+ ],
+ "sequence_id": 10.0,
+ "shortcuts": [],
+ "title": "HR Dashboard",
+ "type": "Workspace"
+}

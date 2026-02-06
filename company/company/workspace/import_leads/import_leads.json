@@ -1,0 +1,37 @@
+{
+ "app": "company",
+ "charts": [],
+ "content": "[{\"id\":\"xIXex1bV_c\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Import Leads</span>\",\"col\":12}}]",
+ "creation": "2025-12-11 17:31:27.834829",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": "http://erp.localhost.innoblitz:8011/app/data-import?reference_doctype=Lead",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "upload",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Import Leads",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2025-12-11 18:27:29.327239",
+ "modified_by": "Administrator",
+ "module": "Company",
+ "name": "Import Leads",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Leads Module",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "CRM User"
+  }
+ ],
+ "sequence_id": 62.0,
+ "shortcuts": [],
+ "title": "Import Leads",
+ "type": "URL"
+}
