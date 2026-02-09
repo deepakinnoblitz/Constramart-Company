@@ -91,7 +91,8 @@
    "fieldname": "business_person",
    "fieldtype": "Link",
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   },
   {
    "fieldname": "section_break_jkob",
@@ -101,7 +102,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:32:39.799334",
+ "modified": "2026-02-09 16:30:59.770934",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Expenses",

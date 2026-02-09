@@ -53,6 +53,15 @@ frappe.ui.form.on("Invoice Collection", {
                 frm.set_value("amount_pending", pay - collected_now);
             });
         }
+        if (frm.is_new()) {
+            frm.set_query("invoice", function () {
+                return {
+                    filters: {
+                        "balance_amount": [">", 0]
+                    },
+                };
+            });
+        }
     },
 
     invoice(frm) {

@@ -9,6 +9,8 @@
   "section_break_kiex",
   "reference_invoice",
   "business_person_name",
+  "column_break_jhof",
+  "customer_name",
   "purchase_details_section",
   "vendor_id",
   "vendor_name",
@@ -121,8 +123,7 @@
    "fieldname": "payment_terms",
    "fieldtype": "Select",
    "label": "Payment Terms",
-   "options": "Select Payment terms\nNext day Payment\nDue On Receipt\n15 days\n30 days\n60 days\n1 Year",
-   "reqd": 1
+   "options": "Select Payment terms\nNext day Payment\nDue On Receipt\n15 days\n30 days\n60 days\n1 Year"
   },
   {
    "fieldname": "due_date",
@@ -234,12 +235,23 @@
    "in_standard_filter": 1,
    "label": "Business Person",
    "options": "Business Person"
+  },
+  {
+   "fieldname": "column_break_jhof",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "reference_invoice.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-03 18:51:13.498102",
+ "modified": "2026-02-09 15:00:58.753116",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase",

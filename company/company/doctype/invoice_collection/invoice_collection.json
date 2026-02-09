@@ -53,7 +53,6 @@
   {
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
-   "in_standard_filter": 1,
    "label": "Mode of Payment",
    "options": "Payment Type",
    "reqd": 1
@@ -148,6 +147,7 @@
   {
    "fieldname": "business_person",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Business Person",
    "options": "Business Person",
    "reqd": 1
