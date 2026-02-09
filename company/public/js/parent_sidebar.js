@@ -1,6 +1,7 @@
 document.addEventListener(
     "click",
     function (e) {
+        if (!e.target) return;
         const parentItem = e.target.closest(".sidebar-item-container");
         if (!parentItem) return;
 

@@ -1,4 +1,6 @@
 frappe.after_ajax(() => {
+    if (!frappe.session.user || frappe.session.user === "Guest") return;
+
     frappe.call({
         method: "company.company.api.get_today_checkin_time",
         callback: function (r) {
@@ -88,3 +90,11 @@ frappe.after_ajax(() => {
         }
     });
 });
+
+// Global listener to blur active input when hovering/touching the primary action button
+$(document).on('mouseenter touchstart', '.primary-action, .btn-primary', function () {
+    if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA")) {
+        document.activeElement.blur();
+    }
+});
+

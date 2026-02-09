@@ -145,13 +145,14 @@
    "fieldname": "business_person_name",
    "fieldtype": "Link",
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:20:32.926399",
+ "modified": "2026-02-06 19:18:10.539042",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Customer",

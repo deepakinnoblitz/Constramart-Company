@@ -17,8 +17,8 @@ function setup_phone_field(field, is_new) {
         field._mouseleave_attached = true;
     }
 
-    // 2. 🇮🇳 Default +91 logic (Only for new documents)
-    if (!is_new) return;
+    // 2. 🇮🇳 Default +91 logic
+    // if (!is_new) return;
 
     // 🔒 Already initialized → never run again
     if (field._phone_ui_initialized) return;

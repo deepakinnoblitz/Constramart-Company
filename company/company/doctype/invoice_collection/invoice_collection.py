@@ -53,15 +53,20 @@ class InvoiceCollection(Document):
 		invoice = frappe.get_doc("Invoice", self.invoice)
 		
 		# Calculate total collected amount from all Invoice Collection records
-		total_collected = frappe.db.sql("""
+		total_collected = frappe.utils.flt(frappe.db.sql("""
 			SELECT SUM(amount_collected) as total
 			FROM `tabInvoice Collection`
 			WHERE invoice = %s
-		""", (self.invoice,))[0][0] or 0
+		""", (self.invoice,))[0][0] or 0)
 		
-		# Update Invoice fields
-		invoice.db_set("received_amount", total_collected, update_modified=False)
-		invoice.db_set("balance_amount", invoice.grand_total - total_collected, update_modified=False)
+		grand_total = frappe.utils.flt(invoice.grand_total)
+		balance = grand_total - total_collected
+		
+		# Update Invoice fields atomically
+		frappe.db.set_value("Invoice", self.invoice, {
+			"received_amount": total_collected,
+			"balance_amount": balance
+		})
 		
 		frappe.db.commit()
 

@@ -200,9 +200,5 @@ function calculate_totals_live(frm) {
     let final_gt = flt(natural_total + roundoff, 2);
     frm.set_value("grand_total", final_gt);
 
-    // Also update balance_amount in UI if it exists
-    if (frm.fields_dict.balance_amount) {
-        let paid_received = flt(frm.doc.received_amount || 0, 2);
-        frm.set_value('balance_amount', flt(final_gt - paid_received, 2));
-    }
+
 }
