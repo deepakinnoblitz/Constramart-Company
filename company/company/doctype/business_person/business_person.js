@@ -25,30 +25,73 @@ frappe.ui.form.on("Business Person", {
 
     refresh(frm) {
 
-    },
-
-    validate(frm) {
-        // Check if phone number is unique
-        if (frm.doc.phone_number) {
-            frappe.call({
-                method: "frappe.client.get_list",
-                args: {
-                    doctype: "Business Person",
-                    filters: {
-                        phone_number: frm.doc.phone_number,
-                        name: ["!=", frm.doc.name]
-                    },
-                    fields: ["name"]
-                },
-                async: false,
-                callback: function (r) {
-                    if (r.message && r.message.length > 0) {
-                        frappe.msgprint(__("Phone Number {0} already exists for {1}",
-                            [frm.doc.phone_number, r.message[0].name]));
-                        frappe.validated = false;
-                    }
-                }
-            });
-        }
     }
 });
+
+// Explicit listener for Quick Entry Modal
+$(document).on('shown.bs.modal', function (e) {
+    if (cur_dialog && cur_dialog.doctype === "Business Person") {
+        bind_quick_entry_save(cur_dialog);
+    }
+});
+
+function bind_quick_entry_save(dialog) {
+    let original_action = dialog.primary_action;
+
+    dialog.set_primary_action(__("Save"), function () {
+        // Disable button to prevent multiple clicks
+        dialog.get_primary_btn().prop('disabled', true);
+
+        check_duplicate_async(dialog).then((is_duplicate) => {
+            if (is_duplicate) {
+                // If duplicate, re-enable so they can fix and try again
+                dialog.get_primary_btn().prop('disabled', false);
+            } else {
+                // If unique, proceed with original save
+                if (original_action) {
+                    original_action();
+                }
+            }
+        });
+    });
+}
+
+function check_duplicate_async(dialog) {
+    return new Promise((resolve) => {
+        let phone = dialog.get_value("phone_number");
+        let name = dialog.get_value("business_person_name");
+
+        // Check Name
+        if (name) {
+            frappe.db.get_value("Business Person", {
+                "business_person_name": name,
+                "name": ["!=", dialog.doc.name || ""]
+            }, "name").then((r) => {
+                if (r && r.message && r.message.name) {
+                    frappe.msgprint(__("Business Person Name '{0}' already exists.", [name]));
+                    resolve(true);
+                    return;
+                }
+                // Check Phone (nested)
+                check_phone(phone, dialog, resolve);
+            });
+        } else {
+            check_phone(phone, dialog, resolve);
+        }
+    });
+}
+
+function check_phone(phone, dialog, resolve) {
+    if (!phone) { resolve(false); return; }
+    frappe.db.get_value("Business Person", {
+        "phone_number": phone,
+        "name": ["!=", dialog.doc.name || ""]
+    }, "name").then((r) => {
+        if (r && r.message && r.message.name) {
+            frappe.msgprint(__("Phone Number '{0}' already exists.", [phone]));
+            resolve(true);
+        } else {
+            resolve(false);
+        }
+    });
+}

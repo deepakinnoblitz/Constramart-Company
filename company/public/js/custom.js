@@ -1,4 +1,6 @@
 frappe.after_ajax(() => {
+    if (!frappe.session.user || frappe.session.user === "Guest") return;
+
     frappe.call({
         method: "company.company.api.get_today_checkin_time",
         callback: function (r) {
@@ -51,8 +53,13 @@ frappe.after_ajax(() => {
                     `;
             }
 
+            let attempts = 0;
+            const maxAttempts = 20;
+
             const interval = setInterval(() => {
+                attempts++;
                 const logo = document.querySelector(".navbar .navbar-brand.navbar-home"); // ✅ target the logo
+
                 if (logo) {
                     clearInterval(interval);
 
@@ -83,8 +90,19 @@ frappe.after_ajax(() => {
 
                     // ✅ insert right AFTER logo
                     logo.insertAdjacentElement("afterend", badge);
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    // console.warn("Could not find logo to attach badge after multiple attempts.");
                 }
             }, 500);
         }
     });
 });
+
+// Global listener to blur active input when hovering/touching the primary action button
+$(document).on('mouseenter touchstart', '.primary-action, .btn-primary', function () {
+    if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA")) {
+        document.activeElement.blur();
+    }
+});
+

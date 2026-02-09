@@ -1451,15 +1451,16 @@ def get_today_checkin_time():
         if attendance:
             formatted_checkin = format_timedelta(attendance.in_time)
             formatted_checkout = format_timedelta(attendance.out_time)
-            frappe.log_error(
-                f"Today's attendance (formatted): "
-                f"in_time={formatted_checkin}, "
-                f"out_time={formatted_checkout}, "
-                f"status={attendance.status}",
-                "Checkin Debug"
-            )
+            # frappe.log_error(
+            #     f"Today's attendance (formatted): "
+            #     f"in_time={formatted_checkin}, "
+            #     f"out_time={formatted_checkout}, "
+            #     f"status={attendance.status}",
+            #     "Checkin Debug"
+            # )
         else:
-            frappe.log_error("Today's attendance: None", "Checkin Debug")
+            # frappe.log_error("Today's attendance: None", "Checkin Debug")
+            pass
 
         if not attendance:
             return {"status": "Not Checked In", "checkin_time": None, "checkout_time": None}
@@ -1554,7 +1555,7 @@ def get_employee_last_seven_days_attendance():
         # ✅ Reverse the order (latest first)
         timeline_data.reverse()
 
-        frappe.log_error(f"Last 7 Days Timeline Data (Reversed) for {employee}: {timeline_data}", "Timeline Debug")
+        # frappe.log_error(f"Last 7 Days Timeline Data (Reversed) for {employee}: {timeline_data}", "Timeline Debug")
         return timeline_data
 
     except Exception as e:

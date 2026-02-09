@@ -55,6 +55,7 @@ function mark_hr_item_as_read(doctype, name, listview = null) {
 // Update HR Badges in Sidebar
 // ====================================================
 function update_hr_badges() {
+	if (!frappe.session.user || frappe.session.user === "Guest") return;
 	frappe.call({
 		method: "company.company.api.get_unread_count",
 		callback: function (r) {
@@ -174,6 +175,7 @@ frappe.ui.form.on("Request", {
 // ====================================================
 $(function () {
 	// Run once on load
+	if (!frappe.session.user || frappe.session.user === "Guest") return;
 	inject_hr_sidebar_badges();
 	update_hr_badges();
 
