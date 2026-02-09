@@ -32,7 +32,11 @@ function setup_phone_field(field, is_new) {
         return;
     }
 
+    let attempts = 0;
+    const maxAttempts = 20;
+
     const waitForFlag = setInterval(() => {
+        attempts++;
 
         // 🚫 User typed meanwhile → stop forever
         if ($input.val()) {
@@ -42,7 +46,13 @@ function setup_phone_field(field, is_new) {
         }
 
         const $wrapper = field.$wrapper?.find(".selected-phone");
-        if (!$wrapper || !$wrapper.length) return;
+        if (!$wrapper || !$wrapper.length) {
+            if (attempts >= maxAttempts) {
+                clearInterval(waitForFlag);
+                // console.warn("Could not find phone field wrapper after multiple attempts.");
+            }
+            return;
+        }
 
         clearInterval(waitForFlag);
 

@@ -1,5 +1,5 @@
 // ======================================================
-// Invoice FORM SCRIPT (CLEAN VERSION)
+// Invoice FORM SCRIPT
 // ======================================================
 frappe.ui.form.on("Invoice", {
     onload_post_render(frm) {
@@ -38,8 +38,9 @@ frappe.ui.form.on("Invoice", {
 
     overall_discount(frm) { calculate_totals_live(frm); },
     overall_discount_type(frm) { calculate_totals_live(frm); },
-    table_qecz_add(frm) { calculate_totals_live(frm); },
-    table_qecz_remove(frm) { calculate_totals_live(frm); },
+    table_qecz_remove(frm, cdt, cdn) {
+        calculate_totals_live(frm, cdn);
+    },
 
     refresh(frm) {
         // Detect rounding mode from existing roundoff
@@ -159,12 +160,13 @@ function calculate_row_amount_dynamic(row) {
 // ======================================================
 // GRAND TOTAL CALCULATION (CLEAN VERSION)
 // ======================================================
-function calculate_totals_live(frm) {
+function calculate_totals_live(frm, ignore_cdn) {
 
     let qty = 0;
     let total = 0;
 
     (frm.doc.table_qecz || []).forEach(row => {
+        if (ignore_cdn && row.name === ignore_cdn) return;
         qty += flt(row.quantity, 2);
         // Sum rounded subtotals to avoid floating point drift (Accounting Standard)
         total += flt(row.sub_total, 2);
