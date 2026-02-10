@@ -9,6 +9,13 @@ frappe.listview_settings['Purchase'] = {
                 };
             };
         }
+        if (listview.page.fields_dict['bill_date']) {
+            listview.page.fields_dict['bill_date'].$input.on('input', function () {
+                if (!$(this).val()) {
+                    listview.refresh();
+                }
+            });
+        }
     },
     get_query: function (fieldname) {
         if (fieldname === 'vendor_id') {
