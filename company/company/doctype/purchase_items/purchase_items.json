@@ -40,6 +40,7 @@
    "label": "Description"
   },
   {
+   "default": "1",
    "fieldname": "quantity",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -110,7 +111,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-03 13:40:19.750812",
+ "modified": "2026-02-10 10:56:33.293401",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Items",

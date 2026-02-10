@@ -43,3 +43,8 @@ class Expenses(Document):
 
             # Also set document name
             self.name = self.expense_no
+
+    def validate(self):
+        """Ensure at least one row in Expenses Items"""
+        if not self.table_qecz or len(self.table_qecz) == 0:
+            frappe.throw(_("At least one Expense Item is required in 'Expenses Items' table."))

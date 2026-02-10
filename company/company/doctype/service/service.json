@@ -1,34 +1,44 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:service_name",
+ "autoname": "field:service_name_title",
  "creation": "2025-09-18 12:46:52.950990",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "service_id",
-  "service_name"
+  "service_name_title",
+  "service_name",
+  "service_id"
  ],
  "fields": [
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "service_id",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Service ID",
-   "reqd": 1,
    "unique": 1
   },
   {
    "fieldname": "service_name",
    "fieldtype": "Data",
    "label": "Service Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "service_name_title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Service Name Title",
    "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-19 17:20:45.262515",
+ "modified": "2026-02-10 10:37:57.967946",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Service",
@@ -60,6 +70,7 @@
    "write": 1
   }
  ],
+ "quick_entry": 1,
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",

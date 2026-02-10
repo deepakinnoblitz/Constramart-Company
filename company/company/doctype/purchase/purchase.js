@@ -3,6 +3,16 @@
 
 frappe.ui.form.on("Purchase", {
     refresh(frm) {
+
+        // Filter Vendor ID to only show Customers with customer_type = 'Purchase'
+        frm.set_query("vendor_id", function () {
+            return {
+                filters: {
+                    customer_type: "Purchase"
+                }
+            };
+        });
+
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Purchase Collection", { filters: { purchase: frm.doc.name } }).then(count => {
