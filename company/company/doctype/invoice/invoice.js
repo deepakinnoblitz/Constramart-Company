@@ -114,6 +114,14 @@ frappe.ui.form.on("Invoice", {
 
         }
     },
+    table_qecz_remove(frm) {
+        // Delay to ensure the row is removed from frm.doc.table_qecz before calculation
+        setTimeout(() => {
+            if (window.calculate_totals_live) {
+                window.calculate_totals_live(frm);
+            }
+        }, 200);
+    },
     converted_from_estimation(frm) {
         toggle_conversion_section(frm);
     },
@@ -248,9 +256,8 @@ frappe.ui.form.on("Invoice Items", {
 
     tax_type(frm, cdt, cdn) {
         let item = locals[cdt][cdn];
-        if (item.tax_type) {
-            frm.set_value("default_tax_type", item.tax_type);
-        }
+        // Set or clear default_tax_type based on row selection
+        frm.set_value("default_tax_type", item.tax_type || "");
         set_tax_filters(frm);
     }
 });

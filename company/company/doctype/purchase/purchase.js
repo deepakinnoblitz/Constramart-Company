@@ -21,7 +21,13 @@ frappe.ui.form.on("Purchase", {
             });
         }
     },
-
+    table_qecz_remove(frm) {
+        setTimeout(() => {
+            if (window.purchase_calculate_totals_live) {
+                window.purchase_calculate_totals_live(frm);
+            }
+        }, 200);
+    },
     // Tax auto-fill logic
     default_tax_type(frm) {
         if (!frm.doc.default_tax_type) return;
