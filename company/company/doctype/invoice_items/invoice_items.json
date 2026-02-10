@@ -64,7 +64,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Discount Type",
-   "options": "Select Discount Type\nFlat\nPercentage"
+   "options": "\nFlat\nPercentage",
+   "placeholder": "Select DT"
   },
   {
    "fieldname": "discount",
@@ -144,7 +145,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-10 10:56:17.207296",
+ "modified": "2026-02-10 15:18:25.311826",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice Items",

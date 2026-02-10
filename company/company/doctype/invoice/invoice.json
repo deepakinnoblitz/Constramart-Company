@@ -6,9 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "ref_no",
-  "purchase_id",
-  "column_break_ogse",
   "business_person_name",
+  "column_break_ogse",
+  "purchase_id",
   "vendor_name",
   "invoice_details_section",
   "customer_id",
@@ -319,7 +319,8 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_coql",
@@ -341,7 +342,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-09 12:59:16.310774",
+ "modified": "2026-02-10 16:27:01.904461",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice",

@@ -265,8 +265,13 @@ frappe.ui.form.on("Invoice Items", {
 });
 
 function set_tax_filters(frm) {
+    const is_exempted = frm.doc.default_tax_type === "Exempted";
+
+    // Hide "Create New" if Exempted
+    frm.fields_dict.table_qecz.grid.update_docfield_property("tax_type", "only_select", is_exempted ? 1 : 0);
+
     frm.set_query("tax_type", "table_qecz", function () {
-        if (frm.doc.default_tax_type === "Exempted") {
+        if (is_exempted) {
             return {
                 filters: {
                     "name": "Exempted"

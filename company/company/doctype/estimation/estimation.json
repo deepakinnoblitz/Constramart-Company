@@ -217,13 +217,14 @@
    "fieldname": "business_person",
    "fieldtype": "Link",
    "label": "Business person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-03 16:43:21.625915",
+ "modified": "2026-02-10 16:44:18.985835",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Estimation",

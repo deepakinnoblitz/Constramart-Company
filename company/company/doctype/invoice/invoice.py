@@ -119,3 +119,5 @@ class Invoice(Document):
         if invoice_count > 1:
             frappe.db.set_value("Customer", self.customer_id, "is_old_customer", 1)
 
+
+

@@ -2,6 +2,12 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase", {
+    onload(frm) {
+        if (frm.is_new() && (!frm.doc.table_qecz || frm.doc.table_qecz.length === 0)) {
+            frm.add_child("table_qecz");
+            frm.refresh_field("table_qecz");
+        }
+    },
     refresh(frm) {
 
         // Filter Vendor ID to only show Customers with customer_type = 'Purchase'

@@ -16,36 +16,36 @@ frappe.ui.form.on("Estimation",
             // Show button only when document is saved
             if (!frm.doc.__islocal) {
 
-                if(frm.doc.status !== 'Customer Rejected') {
+                if (frm.doc.status !== 'Customer Rejected') {
 
-                frm.add_custom_button("Create Invoice", function () {
+                    frm.add_custom_button("Create Invoice", function () {
 
-                    frappe.confirm(
-                        __("Are you sure you want to convert this Estimation into an Invoice?"),
-                        function () {
-                            // 👉 YES clicked
-                            frappe.call({
-                                method: "company.company.api.convert_estimation_to_invoice",
-                                args: {
-                                    estimation: frm.doc.name
-                                },
-                                callback: function (r) {
-                                    if (r.message) {
-                                        frappe.set_route("Form", "Invoice", r.message);
+                        frappe.confirm(
+                            __("Are you sure you want to convert this Estimation into an Invoice?"),
+                            function () {
+                                // 👉 YES clicked
+                                frappe.call({
+                                    method: "company.company.api.convert_estimation_to_invoice",
+                                    args: {
+                                        estimation: frm.doc.name
+                                    },
+                                    callback: function (r) {
+                                        if (r.message) {
+                                            frappe.set_route("Form", "Invoice", r.message);
+                                        }
                                     }
-                                }
-                            });
-                        },
-                        function () {
-                            // 👉 NO clicked — do nothing
-                            frappe.show_alert({
-                                message: __("Operation cancelled"),
-                                indicator: "orange"
-                            }, 3);
-                        }
-                    );
+                                });
+                            },
+                            function () {
+                                // 👉 NO clicked — do nothing
+                                frappe.show_alert({
+                                    message: __("Operation cancelled"),
+                                    indicator: "orange"
+                                }, 3);
+                            }
+                        );
 
-                });
+                    });
 
                 }
 
