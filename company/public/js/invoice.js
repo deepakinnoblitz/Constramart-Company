@@ -179,7 +179,6 @@ window.calculate_totals_live = function calculate_totals_live(frm) {
     let total = 0;
 
     (frm.doc.table_qecz || []).forEach(row => {
-        if (ignore_cdn && row.name === ignore_cdn) return;
         qty += flt(row.quantity, 2);
         // Sum rounded subtotals to avoid floating point drift (Accounting Standard)
         total += flt(row.sub_total, 2);

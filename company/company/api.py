@@ -128,9 +128,10 @@ def update_invoice_received_balance(doc, method):
         "balance_amount": balance
     })
 
-    # Ensure all collection entries for this invoice show the CURRENT live balance
-    # This fulfills the request "Pending amount should not change for each entry"
-    frappe.db.set_value("Invoice Collection", {"invoice": invoice_name}, "amount_pending", balance)
+    # Update only the CURRENT collection entry with the balance at this point in time
+    # to preserve historical sequence of balances.
+    if doc.doctype == "Invoice Collection":
+        frappe.db.set_value("Invoice Collection", doc.name, "amount_pending", balance)
 
 def validate_invoice_collection(doc, method):
     """
@@ -2035,6 +2036,8 @@ def convert_estimation_to_invoice(estimation):
     # Customer details
     inv.customer_id = est.client_name
 
+    inv.business_person_name = est.business_person
+
     # Invoice date
     inv.invoice_date = frappe.utils.nowdate()
 
@@ -2064,6 +2067,10 @@ def convert_estimation_to_invoice(estimation):
 
     # Save invoice
     inv.insert(ignore_permissions=True, ignore_mandatory=True)
+
+    # Sync Estimation status
+    est.status = "Converted"
+    est.save(ignore_permissions=True)
 
     # SUCCESS MESSAGE
     frappe.msgprint(
