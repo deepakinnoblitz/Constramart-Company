@@ -44,7 +44,6 @@ def get_columns():
 #  MAIN DATA
 # ---------------------------------------------------
 def get_data(filters):
-
     conditions = "1=1"
 
     if filters.get("from_date"):
@@ -59,63 +58,58 @@ def get_data(filters):
     if filters.get("invoice"):
         conditions += f" AND inv.name = '{filters['invoice']}'"
 
-    # Handle checkbox: When checked=1, unchecked might be 0 or simply missing from filters
-    # Default to showing all collections (unchecked) if parameter is not explicitly 1
-    show_only_last = filters.get("show_only_last_collection")
-    if show_only_last == 1:
-        show_only_last = True
-    else:
-        # Treat 0, None, or any other value as False (show all)
-        show_only_last = False
+    # Fetch all collections for relevant invoices to calculate running balance accurately
+    # Sort ASC for sequence calculation
+    raw_data = frappe.db.sql(f"""
+        SELECT
+            ic.name AS collection_id,
+            inv.name AS invoice,
+            inv.invoice_date,
+            inv.customer_id,
+            inv.customer_name,
+            inv.grand_total,
+            ic.collection_date,
+            ic.amount_collected,
+            ic.mode_of_payment AS payment_mode,
+            ic.creation
+        FROM `tabInvoice` inv
+        INNER JOIN `tabInvoice Collection` ic ON ic.invoice = inv.name
+        WHERE {conditions}
+        ORDER BY inv.invoice_date ASC, ic.collection_date ASC, ic.creation ASC
+    """, as_dict=True)
 
-    # Get all collections with invoice details
-    if show_only_last:
-        # Show only the last collection per invoice (by name to be unique)
-        data = frappe.db.sql(f"""
-            SELECT
-                ic.name AS collection_id,
-                inv.name AS invoice,
-                inv.invoice_date,
-                inv.customer_id,
-                inv.customer_name,
-                inv.grand_total,
-                inv.received_amount AS total_collected,
-                inv.balance_amount AS amount_pending,
-                ic.collection_date,
-                ic.amount_collected,
-                ic.mode_of_payment AS payment_mode
-            FROM `tabInvoice` inv
-            INNER JOIN `tabInvoice Collection` ic ON ic.invoice = inv.name
-            INNER JOIN (
-                SELECT invoice, MAX(name) AS max_name
-                FROM `tabInvoice Collection`
-                GROUP BY invoice
-            ) latest ON ic.name = latest.max_name
-            WHERE {conditions}
-            ORDER BY inv.invoice_date DESC, ic.collection_date DESC
-        """, as_dict=True)
-    else:
-        # Show all collections
-        data = frappe.db.sql(f"""
-            SELECT
-                ic.name AS collection_id,
-                inv.name AS invoice,
-                inv.invoice_date,
-                inv.customer_id,
-                inv.customer_name,
-                inv.grand_total,
-                inv.received_amount AS total_collected,
-                inv.balance_amount AS amount_pending,
-                ic.collection_date,
-                ic.amount_collected,
-                ic.mode_of_payment AS payment_mode
-            FROM `tabInvoice` inv
-            INNER JOIN `tabInvoice Collection` ic ON ic.invoice = inv.name
-            WHERE {conditions}
-            ORDER BY inv.invoice_date DESC, ic.collection_date DESC
-        """, as_dict=True)
+    invoice_running_total = {}
+    processed_data = []
 
-    return data
+    # Calculate running balance per invoice
+    for d in raw_data:
+        inv_name = d.invoice
+        if inv_name not in invoice_running_total:
+            invoice_running_total[inv_name] = 0.0
+
+        invoice_running_total[inv_name] += flt(d.amount_collected)
+
+        # Total collected up to this point
+        d.total_collected = invoice_running_total[inv_name]
+        # Pending after this specific collection
+        d.amount_pending = flt(d.grand_total) - d.total_collected
+        processed_data.append(d)
+
+    # Handle 'show_only_last_collection' in Python
+    if filters.get("show_only_last_collection"):
+        last_collection_map = {}
+        for d in processed_data:
+            # Since we iterate ASC, the latest one will overwrite others
+            last_collection_map[d.invoice] = d
+        processed_data = list(last_collection_map.values())
+
+    # Final sort for display (Latest First)
+    processed_data.sort(
+        key=lambda x: (x.invoice_date, x.collection_date, x.creation),
+        reverse=True
+    )
+
+    return processed_data
 
 
 # ---------------------------------------------------
@@ -129,14 +123,12 @@ def get_summary(data):
     unique_invoices = set()
     
     for d in data:
-        # Sum every ACTUAL collection amount shown in the report
-        total_collected += flt(d.get("amount_collected"))
-        
         inv = d.get("invoice")
         if inv not in unique_invoices:
             unique_invoices.add(inv)
-            # Add invoice-level totals only once
+            # Add invoice-level totals only once (from the latest available record for this invoice)
             total_inv += flt(d.get("grand_total"))
+            total_collected += flt(d.get("total_collected"))
             total_pending += flt(d.get("amount_pending"))
 
     return [
