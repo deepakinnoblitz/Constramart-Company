@@ -9,6 +9,13 @@ frappe.listview_settings['Invoice'] = {
                 };
             };
         }
+        if (listview.page.fields_dict['invoice_date']) {
+            listview.page.fields_dict['invoice_date'].$input.on('input', function () {
+                if (!$(this).val()) {
+                    listview.refresh();
+                }
+            });
+        }
     },
     get_query: function (fieldname) {
         if (fieldname === 'customer_id') {
