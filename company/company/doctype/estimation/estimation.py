@@ -65,3 +65,14 @@ class Estimation(Document):
 
         self.grand_total = total + (frappe.utils.flt(self.roundoff) if hasattr(self, 'roundoff') else 0)
 
+    def on_trash(self):
+        # Prevent deletion if an Invoice has been created from this estimation
+        linked_invoice = frappe.db.get_value("Invoice", {"converted_estimation_id": self.name}, "name")
+        if linked_invoice:
+            frappe.throw(
+                frappe._("Cannot delete Estimation {0} because it has already been converted to Invoice {1}. "
+                         "Please delete the Invoice first if you wish to remove this Estimation.").format(
+                    frappe.bold(self.name),
+                    frappe.bold(linked_invoice)
+                )
+            )

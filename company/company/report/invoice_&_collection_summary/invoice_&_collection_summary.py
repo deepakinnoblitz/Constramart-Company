@@ -126,18 +126,26 @@ def get_summary(data):
     total_collected = 0
     total_pending = 0
     
-    unique_invoices = set()
-    
+    # Process invoices only once for totals like Grand Total and Pending
+    # But sum EVERY collection entry for "Total Collected"
+    unique_invoices = {}
+    total_collected = 0
+
     for d in data:
         # Sum every ACTUAL collection amount shown in the report
         total_collected += flt(d.get("amount_collected"))
         
         inv = d.get("invoice")
+        # Since the data is ordered by collection_date DESC or invoice_date DESC,
+        # the first row we see for an invoice is its latest state in this report.
         if inv not in unique_invoices:
-            unique_invoices.add(inv)
-            # Add invoice-level totals only once
-            total_inv += flt(d.get("grand_total"))
-            total_pending += flt(d.get("amount_pending"))
+            unique_invoices[inv] = {
+                "grand_total": flt(d.get("grand_total")),
+                "amount_pending": flt(d.get("amount_pending"))
+            }
+
+    total_inv = sum(v["grand_total"] for v in unique_invoices.values())
+    total_pending = sum(v["amount_pending"] for v in unique_invoices.values())
 
     return [
         {
