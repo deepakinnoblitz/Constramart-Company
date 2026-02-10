@@ -70,7 +70,7 @@ def get_data(filters):
 
     # Get all collections with invoice details
     if show_only_last:
-        # Show only the last collection per invoice (by creation timestamp to handle same dates)
+        # Show only the last collection per invoice (by name to be unique)
         data = frappe.db.sql(f"""
             SELECT
                 ic.name AS collection_id,
@@ -87,10 +87,10 @@ def get_data(filters):
             FROM `tabInvoice` inv
             INNER JOIN `tabInvoice Collection` ic ON ic.invoice = inv.name
             INNER JOIN (
-                SELECT invoice, MAX(creation) AS max_creation
+                SELECT invoice, MAX(name) AS max_name
                 FROM `tabInvoice Collection`
                 GROUP BY invoice
-            ) latest ON ic.invoice = latest.invoice AND ic.creation = latest.max_creation
+            ) latest ON ic.name = latest.max_name
             WHERE {conditions}
             ORDER BY inv.invoice_date DESC, ic.collection_date DESC
         """, as_dict=True)
@@ -122,21 +122,22 @@ def get_data(filters):
 #  SUMMARY CARDS
 # ---------------------------------------------------
 def get_summary(data):
-
-    # Get unique invoices to calculate totals
-    unique_invoices = {}
+    total_inv = 0
+    total_collected = 0
+    total_pending = 0
+    
+    unique_invoices = set()
+    
     for d in data:
+        # Sum every ACTUAL collection amount shown in the report
+        total_collected += flt(d.get("amount_collected"))
+        
         inv = d.get("invoice")
         if inv not in unique_invoices:
-            unique_invoices[inv] = {
-                "grand_total": flt(d.get("grand_total")),
-                "total_collected": flt(d.get("total_collected")),
-                "amount_pending": flt(d.get("amount_pending"))
-            }
-
-    total_inv = sum(v["grand_total"] for v in unique_invoices.values())
-    total_collected = sum(v["total_collected"] for v in unique_invoices.values())
-    total_pending = sum(v["amount_pending"] for v in unique_invoices.values())
+            unique_invoices.add(inv)
+            # Add invoice-level totals only once
+            total_inv += flt(d.get("grand_total"))
+            total_pending += flt(d.get("amount_pending"))
 
     return [
         {
