@@ -32,6 +32,8 @@ frappe.ui.form.on("Customer", {
             const color = frm.doc.is_old_customer ? "blue" : "green";
             frm.page.set_indicator(label, color);
         }
+
+        frm.trigger("set_city_state");
     },
 
     onload(frm) {
@@ -49,10 +51,14 @@ frappe.ui.form.on("Customer", {
         frm.set_value("state", null);
         frm.set_value("city", null);
 
+        frm.trigger("set_city_state");
+
         load_states_and_restore_state(frm);
     },
 
     state(frm) {
+        frm.trigger("set_city_state");
+
         if (!frm.doc.state) return;
 
         if (frm.doc.state === "Others") {
@@ -70,7 +76,7 @@ frappe.ui.form.on("Customer", {
         frappe.call({
             method: "company.company.api.check_customer_links",
             args: { customer: frm.doc.name },
-            callback: function(r) {
+            callback: function (r) {
                 let has_links = r.message || false;
 
                 if (has_links) {
@@ -110,10 +116,23 @@ frappe.ui.form.on("Customer", {
                         }
                     });
 
+                    frm.trigger("set_city_state");
+
                     frm.enable_save();
                 }
             }
         });
+    },
+
+    set_city_state(frm) {
+        let is_locked = false;
+        if (!frm.is_new()) {
+            let field = frm.get_field("customer_name");
+            if (field && field.df.read_only) {
+                is_locked = true;
+            }
+        }
+        frm.set_df_property("city", "read_only", (frm.doc.state && !is_locked) ? 0 : 1);
     }
 
 });

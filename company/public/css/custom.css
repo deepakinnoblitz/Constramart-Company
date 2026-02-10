@@ -2449,3 +2449,12 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
 .modal-body, .frappe-control[data-fieldtype=Phone], .selected-phone {
     top: 0 !important;
 }
+
+.workspace-title{
+   color: #ffffff !important;
+}
+
+#icon-home{
+  color: #ffffff !important;
+  stroke: #ffffff !important; 
+}
