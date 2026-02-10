@@ -95,16 +95,18 @@ frappe.ui.form.on("Invoice", {
 
 
             // Collection Management Buttons
-            frm.add_custom_button(__("Create Collection"), function () {
-                frappe.new_doc("Invoice Collection", {
-                    invoice: frm.doc.name,
-                    customer_id: frm.doc.customer_id,
-                    customer_name: frm.doc.customer_name,
-                    company_name: frm.doc.billing_name,
-                    amount_to_pay: frm.doc.balance_amount,
-                    collection_date: frappe.datetime.get_today()
-                });
-            }, __("Collections"));
+            if (flt(frm.doc.balance_amount, 2) > 0) {
+                frm.add_custom_button(__("Create Collection"), function () {
+                    frappe.new_doc("Invoice Collection", {
+                        invoice: frm.doc.name,
+                        customer_id: frm.doc.customer_id,
+                        customer_name: frm.doc.customer_name,
+                        company_name: frm.doc.billing_name,
+                        amount_to_pay: frm.doc.balance_amount,
+                        collection_date: frappe.datetime.get_today()
+                    });
+                }, __("Collections"));
+            }
 
             frm.add_custom_button(__("View Collections"), function () {
                 frappe.set_route("List", "Invoice Collection", {

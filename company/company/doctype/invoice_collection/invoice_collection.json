@@ -53,7 +53,6 @@
   {
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
-   "in_standard_filter": 1,
    "label": "Mode of Payment",
    "options": "Payment Type",
    "reqd": 1
@@ -148,14 +147,16 @@
   {
    "fieldname": "business_person",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:25:35.211565",
+ "modified": "2026-02-06 19:28:38.847652",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice Collection",

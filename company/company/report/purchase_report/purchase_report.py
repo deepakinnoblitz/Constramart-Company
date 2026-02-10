@@ -58,7 +58,6 @@ def execute(filters=None):
             "width": 140,
         },
         {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "width": 80},
-        {"fieldname": "price", "label": "Avg Price", "fieldtype": "Currency", "width": 120},
         {
             "fieldname": "grand_total",
             "label": "Purchase Total",

@@ -128,6 +128,10 @@ def update_invoice_received_balance(doc, method):
         "balance_amount": balance
     })
 
+    # Ensure all collection entries for this invoice show the CURRENT live balance
+    # This fulfills the request "Pending amount should not change for each entry"
+    frappe.db.set_value("Invoice Collection", {"invoice": invoice_name}, "amount_pending", balance)
+
 def validate_invoice_collection(doc, method):
     """
     Prevent Invoice Collection from exceeding Invoice grand_total
@@ -1451,15 +1455,16 @@ def get_today_checkin_time():
         if attendance:
             formatted_checkin = format_timedelta(attendance.in_time)
             formatted_checkout = format_timedelta(attendance.out_time)
-            frappe.log_error(
-                f"Today's attendance (formatted): "
-                f"in_time={formatted_checkin}, "
-                f"out_time={formatted_checkout}, "
-                f"status={attendance.status}",
-                "Checkin Debug"
-            )
+            # frappe.log_error(
+            #     f"Today's attendance (formatted): "
+            #     f"in_time={formatted_checkin}, "
+            #     f"out_time={formatted_checkout}, "
+            #     f"status={attendance.status}",
+            #     "Checkin Debug"
+            # )
         else:
-            frappe.log_error("Today's attendance: None", "Checkin Debug")
+            # frappe.log_error("Today's attendance: None", "Checkin Debug")
+            pass
 
         if not attendance:
             return {"status": "Not Checked In", "checkin_time": None, "checkout_time": None}
@@ -1554,7 +1559,7 @@ def get_employee_last_seven_days_attendance():
         # ✅ Reverse the order (latest first)
         timeline_data.reverse()
 
-        frappe.log_error(f"Last 7 Days Timeline Data (Reversed) for {employee}: {timeline_data}", "Timeline Debug")
+        # frappe.log_error(f"Last 7 Days Timeline Data (Reversed) for {employee}: {timeline_data}", "Timeline Debug")
         return timeline_data
 
     except Exception as e:
@@ -2321,43 +2326,24 @@ def get_dashboard_stats():
     # INVOICE COUNTS
     # ----------------------------------
 
-    invoices = frappe.db.get_all(
+    # Filter only Open (docstatus=0) Invoices with a pending balance
+    # (The Invoice doctype is not submittable, so docstatus remains 0)
+    invoices = frappe.get_all(
         "Invoice",
-        filters={"docstatus": 0},
-        fields=["name", "balance_amount"]
+        filters={
+            "docstatus": 0,
+            "balance_amount": [">", 0]
+        },
+        fields=["balance_amount"]
     )
 
-    total_pending = 0
-
-    for inv in invoices:
-
-        # Fetch latest Invoice Collection entry
-        latest = frappe.db.sql("""
-            SELECT amount_pending
-            FROM `tabInvoice Collection`
-            WHERE invoice = %s
-            ORDER BY creation DESC
-            LIMIT 1
-        """, (inv.name,), as_dict=True)
-
-        if latest and latest[0].amount_pending is not None:
-            # If collection exists → use latest pending
-            pending = latest[0].amount_pending
-        else:
-            # If no collection → full balance is pending
-            pending = inv.balance_amount
-
-        total_pending += pending or 0
-
-
-    # Count open invoices
-    open_invoices = frappe.db.count("Invoice", {"docstatus": 0})
-
+    total_pending = sum(frappe.utils.flt(inv.balance_amount) for inv in invoices)
+    open_invoices_count = len(invoices)
 
     return {
         "pending_estimations": pending_estimations,
         "converted_estimations": converted_estimations,
-        "open_invoices": open_invoices,
+        "open_invoices": open_invoices_count,
         "invoice_pending_amount": total_pending
     }
     

@@ -15,30 +15,36 @@
   {
    "fieldname": "items",
    "fieldtype": "Data",
-   "label": "Items"
+   "in_list_view": 1,
+   "label": "Items",
+   "reqd": 1
   },
   {
    "fieldname": "quantity",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Quantity",
    "precision": "0"
   },
   {
    "fieldname": "price",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Price"
   },
   {
    "fieldname": "amount",
    "fieldtype": "Float",
-   "label": "Amount"
+   "in_list_view": 1,
+   "label": "Amount",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-24 13:03:54.521084",
+ "modified": "2026-02-09 16:35:11.108285",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Expenses Items",

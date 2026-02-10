@@ -2,6 +2,15 @@
 frappe.ui.form.on("Purchase", {
     onload_post_render: function (frm) {
 
+        // Filter Vendor ID to only show Customers with customer_type = 'Purchase'
+        frm.set_query("vendor_id", function () {
+            return {
+                filters: {
+                    customer_type: "Purchase"
+                }
+            };
+        });
+
         // Filter Vendor Name to only show Customers with customer_type = 'Purchase'
         frm.set_query("vendor_name", function () {
             return {

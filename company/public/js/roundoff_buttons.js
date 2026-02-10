@@ -115,11 +115,6 @@ function apply_rounding(frm, direction) {
     // Refresh grand total immediately in UI
     frm.set_value('grand_total', target);
 
-    // Also update balance_amount in UI if it exists
-    if (frm.fields_dict.balance_amount) {
-        const paid_received = flt(frm.doc.received_amount || frm.doc.paid_amount || 0, 2);
-        frm.set_value('balance_amount', flt(target - paid_received, 2));
-    }
 
     frappe.show_alert({
         message: `Total rounded to ${frappe.format(target, { fieldtype: 'Currency' })}`,

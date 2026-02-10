@@ -7,7 +7,9 @@
  "field_order": [
   "ref_no",
   "purchase_id",
+  "column_break_ogse",
   "business_person_name",
+  "vendor_name",
   "invoice_details_section",
   "customer_id",
   "billing_address",
@@ -323,12 +325,23 @@
    "fieldname": "column_break_coql",
    "fieldtype": "Column Break",
    "hidden": 1
+  },
+  {
+   "fieldname": "column_break_ogse",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "purchase_id.vendor_name",
+   "fieldname": "vendor_name",
+   "fieldtype": "Data",
+   "label": "Vendor Name",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-03 16:42:54.726812",
+ "modified": "2026-02-09 12:59:16.310774",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice",

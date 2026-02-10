@@ -1,8 +1,16 @@
 // ======================================================
-// Invoice FORM SCRIPT (CLEAN VERSION)
+// Invoice FORM SCRIPT
 // ======================================================
 frappe.ui.form.on("Invoice", {
     onload_post_render(frm) {
+        // Filter Customer ID to only show Customers with customer_type = 'Sales'
+        frm.set_query("customer_id", function () {
+            return {
+                filters: {
+                    customer_type: "Sales"
+                }
+            };
+        });
 
         // Default date
         if (!frm.doc.invoice_date) {
@@ -171,6 +179,7 @@ window.calculate_totals_live = function calculate_totals_live(frm) {
     let total = 0;
 
     (frm.doc.table_qecz || []).forEach(row => {
+        if (ignore_cdn && row.name === ignore_cdn) return;
         qty += flt(row.quantity, 2);
         // Sum rounded subtotals to avoid floating point drift (Accounting Standard)
         total += flt(row.sub_total, 2);

@@ -2,53 +2,57 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Business Person", {
-    onload_post_render(frm) {
-        // Ensure phone field is properly initialized in Quick Entry
-        if (frm.fields_dict.phone_number) {
-            const phone_field = frm.fields_dict.phone_number;
 
-            // Force re-render of phone field to initialize intl-tel-input
-            if (phone_field.$input && phone_field.$input.length) {
-                // Trigger Frappe's phone field setup
-                setTimeout(() => {
-                    phone_field.refresh();
-
-                    // If the field still doesn't have the phone widget, manually initialize it
-                    if (!phone_field.$input.parent().find('.iti').length) {
-                        // Re-make the field to trigger proper initialization
-                        phone_field.make_input();
-                    }
-                }, 100);
-            }
-        }
-    },
 
     refresh(frm) {
-
-    },
-
-    validate(frm) {
-        // Check if phone number is unique
-        if (frm.doc.phone_number) {
-            frappe.call({
-                method: "frappe.client.get_list",
-                args: {
-                    doctype: "Business Person",
-                    filters: {
-                        phone_number: frm.doc.phone_number,
-                        name: ["!=", frm.doc.name]
-                    },
-                    fields: ["name"]
-                },
-                async: false,
-                callback: function (r) {
-                    if (r.message && r.message.length > 0) {
-                        frappe.msgprint(__("Phone Number {0} already exists for {1}",
-                            [frm.doc.phone_number, r.message[0].name]));
-                        frappe.validated = false;
-                    }
-                }
-            });
+        // 🚀 SILENCE: Hide the hard error dialog container
+        if (!$('#silence-bp-dialog').length) {
+            $('<style id="silence-bp-dialog">#dialog-container { display: none !important; }</style>').appendTo('head');
         }
+    },
+    
+    after_save(frm) {
+        show_custom_bp_toast(__("Saved Successfully"), "green");
     }
 });
+
+
+
+/**
+ * Custom toast notification for Business Person DocType
+ * Bypasses the hidden #alert-container/dialog-container
+ */
+function show_custom_bp_toast(msg, type) {
+    const is_green = type === "green";
+    const bg = is_green ? "#e2f6ec" : "#fff5e6";
+    const color = is_green ? "#28a745" : "#ffc107";
+    const border = is_green ? "#ade3c8" : "#ffe5cc";
+    const icon = is_green ? "fa-check-circle" : "fa-exclamation-triangle";
+
+    const toast = $(`
+        <div class="custom-bp-toast" style="
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            padding: 14px 24px;
+            background: ${bg};
+            color: ${color};
+            border: 1px solid ${border};
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            z-index: 100001;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        ">
+            <i class="fa ${icon}" style="font-size: 16px;"></i>
+            <span>${msg}</span>
+        </div>
+    `).appendTo('body');
+
+    toast.css('display', 'flex').hide().fadeIn(300).delay(2500).fadeOut(500, function () {
+        $(this).remove();
+    });
+}
