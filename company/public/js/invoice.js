@@ -3,6 +3,14 @@
 // ======================================================
 frappe.ui.form.on("Invoice", {
     onload_post_render(frm) {
+        // Filter Customer ID to only show Customers with customer_type = 'Sales'
+        frm.set_query("customer_id", function () {
+            return {
+                filters: {
+                    customer_type: "Sales"
+                }
+            };
+        });
 
         // Default date
         if (!frm.doc.invoice_date) {

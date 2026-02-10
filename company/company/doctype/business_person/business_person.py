@@ -31,9 +31,10 @@ class BusinessPerson(Document):
                 "Business Person",
                 {
                     "phone_number": self.phone_number,
-                    "name": ["!=", self.name]
+                    "name": ["!=", self.name or ""]
                 }
             )
             if exists:
-                frappe.throw(_("Phone Number {0} already exists for {1}").format(self.phone_number, exists))
+                frappe.throw(_("Phone Number {0} already exists for {1}")
+                             .format(self.phone_number, exists))
 
