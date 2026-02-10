@@ -36,18 +36,14 @@ frappe.after_ajax(() => {
         // Run immediately
         injectLogo();
 
-        // 1. Hook into router change (Primary trigger)
-        frappe.router.on('change', injectLogo);
-
-        // 2. Debounced MutationObserver (Backup for dynamic updates)
-        let timeout;
+        // Watch for changes (sidebar appearing later)
+        // Disconnect after successful injection could be an option, but 
+        // sidebar might be re-rendered (e.g. partial reload). 
+        // We keeping it but strictly checking for existence.
         const observer = new MutationObserver((mutations) => {
-            if (timeout) clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                if (!document.querySelector("#company-sidebar-logo")) {
-                    injectLogo();
-                }
-            }, 500); // 500ms debounce
+            if (!document.querySelector("#company-sidebar-logo")) {
+                injectLogo();
+            }
         });
 
         // Observe only the layout container if possible, otherwise body is fine but resource intensive

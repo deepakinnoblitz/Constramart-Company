@@ -11,15 +11,15 @@
  "icon": "clipboard",
  "idx": 0,
  "indicator_color": "green",
- "is_hidden": 0,
- "label": "Invoice List",
+ "is_hidden": 1,
+ "label": "Sales List",
  "link_to": "Invoice",
  "link_type": "DocType",
  "links": [],
- "modified": "2025-11-24 11:34:24.601430",
+ "modified": "2026-02-10 15:12:07.451074",
  "modified_by": "Administrator",
  "module": "Company",
- "name": "Invoice List",
+ "name": "Sales List",
  "number_cards": [],
  "owner": "Administrator",
  "parent_page": "",
@@ -33,8 +33,8 @@
    "role": "Sales Employee"
   }
  ],
- "sequence_id": 33.0,
+ "sequence_id": 32.0,
  "shortcuts": [],
- "title": "Invoice List",
+ "title": "Sales List",
  "type": "Link"
 }

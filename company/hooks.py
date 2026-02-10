@@ -58,12 +58,8 @@ doc_events = {
         "before_insert": "company.company.api.before_insert_invoice"
     },
     "Invoice Collection": {
-        "after_insert": "company.company.api.update_invoice_received_balance",
-        "on_update": "company.company.api.update_invoice_received_balance",
-        "on_trash": "company.company.api.update_invoice_received_balance"
-    },
-    "Invoice Collection": {
         "validate": "company.company.api.validate_invoice_collection",
+        "after_insert": "company.company.api.update_invoice_received_balance",
         "on_update": "company.company.api.update_invoice_received_balance",
         "on_trash": "company.company.api.update_invoice_received_balance"
     },
@@ -172,7 +168,6 @@ extend_bootinfo = "company.company.api.extend_bootinfo"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

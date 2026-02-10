@@ -2,7 +2,23 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase", {
+    onload(frm) {
+        if (frm.is_new() && (!frm.doc.table_qecz || frm.doc.table_qecz.length === 0)) {
+            frm.add_child("table_qecz");
+            frm.refresh_field("table_qecz");
+        }
+    },
     refresh(frm) {
+
+        // Filter Vendor ID to only show Customers with customer_type = 'Purchase'
+        frm.set_query("vendor_id", function () {
+            return {
+                filters: {
+                    customer_type: "Purchase"
+                }
+            };
+        });
+
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Purchase Collection", { filters: { purchase: frm.doc.name } }).then(count => {
@@ -21,7 +37,13 @@ frappe.ui.form.on("Purchase", {
             });
         }
     },
-
+    table_qecz_remove(frm) {
+        setTimeout(() => {
+            if (window.purchase_calculate_totals_live) {
+                window.purchase_calculate_totals_live(frm);
+            }
+        }, 200);
+    },
     // Tax auto-fill logic
     default_tax_type(frm) {
         if (!frm.doc.default_tax_type) return;

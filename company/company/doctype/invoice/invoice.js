@@ -95,16 +95,18 @@ frappe.ui.form.on("Invoice", {
 
 
             // Collection Management Buttons
-            frm.add_custom_button(__("Create Collection"), function () {
-                frappe.new_doc("Invoice Collection", {
-                    invoice: frm.doc.name,
-                    customer_id: frm.doc.customer_id,
-                    customer_name: frm.doc.customer_name,
-                    company_name: frm.doc.billing_name,
-                    amount_to_pay: frm.doc.balance_amount,
-                    collection_date: frappe.datetime.get_today()
-                });
-            }, __("Collections"));
+            if (flt(frm.doc.balance_amount, 2) > 0) {
+                frm.add_custom_button(__("Create Collection"), function () {
+                    frappe.new_doc("Invoice Collection", {
+                        invoice: frm.doc.name,
+                        customer_id: frm.doc.customer_id,
+                        customer_name: frm.doc.customer_name,
+                        company_name: frm.doc.billing_name,
+                        amount_to_pay: frm.doc.balance_amount,
+                        collection_date: frappe.datetime.get_today()
+                    });
+                }, __("Collections"));
+            }
 
             frm.add_custom_button(__("View Collections"), function () {
                 frappe.set_route("List", "Invoice Collection", {
@@ -113,6 +115,14 @@ frappe.ui.form.on("Invoice", {
             }, __("Collections"));
 
         }
+    },
+    table_qecz_remove(frm) {
+        // Delay to ensure the row is removed from frm.doc.table_qecz before calculation
+        setTimeout(() => {
+            if (window.calculate_totals_live) {
+                window.calculate_totals_live(frm);
+            }
+        }, 200);
     },
     converted_from_estimation(frm) {
         toggle_conversion_section(frm);
@@ -248,16 +258,20 @@ frappe.ui.form.on("Invoice Items", {
 
     tax_type(frm, cdt, cdn) {
         let item = locals[cdt][cdn];
-        if (item.tax_type) {
-            frm.set_value("default_tax_type", item.tax_type);
-        }
+        // Set or clear default_tax_type based on row selection
+        frm.set_value("default_tax_type", item.tax_type || "");
         set_tax_filters(frm);
     }
 });
 
 function set_tax_filters(frm) {
+    const is_exempted = frm.doc.default_tax_type === "Exempted";
+
+    // Hide "Create New" if Exempted
+    frm.fields_dict.table_qecz.grid.update_docfield_property("tax_type", "only_select", is_exempted ? 1 : 0);
+
     frm.set_query("tax_type", "table_qecz", function () {
-        if (frm.doc.default_tax_type === "Exempted") {
+        if (is_exempted) {
             return {
                 filters: {
                     "name": "Exempted"

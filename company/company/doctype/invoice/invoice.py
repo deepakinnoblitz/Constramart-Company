@@ -90,6 +90,9 @@ class Invoice(Document):
 
         self.grand_total = total + (flt(self.roundoff) if hasattr(self, 'roundoff') else 0)
 
+        # Sync Balance Amount
+        self.balance_amount = flt(self.grand_total) - flt(self.received_amount)
+
     def on_update(self):
         """Update Purchase reference when purchase_id changes"""
         if self.has_value_changed("purchase_id"):
@@ -115,4 +118,6 @@ class Invoice(Document):
 
         if invoice_count > 1:
             frappe.db.set_value("Customer", self.customer_id, "is_old_customer", 1)
+
+
 

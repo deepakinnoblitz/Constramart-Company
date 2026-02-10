@@ -40,6 +40,7 @@
    "label": "Description"
   },
   {
+   "default": "1",
    "fieldname": "quantity",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -58,7 +59,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Discount Type",
-   "options": "Select Discount Type\nFlat\nPercentage"
+   "options": "\nFlat\nPercentage",
+   "placeholder": "Select Discount Type"
   },
   {
    "fieldname": "discount",
@@ -110,7 +112,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-03 13:40:19.750812",
+ "modified": "2026-02-10 15:16:58.268500",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Items",
