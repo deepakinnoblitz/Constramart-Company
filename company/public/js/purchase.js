@@ -25,60 +25,50 @@ frappe.ui.form.on("Purchase", {
             frm.set_value("bill_date", frappe.datetime.get_today());
         }
 
-        // Live discount typing
-        const discount_field = frm.fields_dict.overall_discount?.input;
-        if (discount_field) {
-            $(discount_field).on('input', function () {
-                calculate_totals_live(frm);
-            });
-        }
-
-        const discount_type_field = frm.fields_dict.overall_discount_type?.input;
-        if (discount_type_field) {
-            $(discount_type_field).on('change', function () {
-                calculate_totals_live(frm);
-            });
-        }
+        // Live discount listeners
+        $(frm.fields_dict.overall_discount.input).on("input", () => calculate_totals_live(frm));
+        $(frm.fields_dict.overall_discount_type.input).on("change", () => calculate_totals_live(frm));
 
         // Live calculation for child table quantity/price/discount
-        const table_wrapper = frm.fields_dict.table_qecz?.grid.wrapper;
-        if (table_wrapper) {
-            table_wrapper.on(
-                'input',
-                'input[data-fieldname="quantity"], input[data-fieldname="price"], input[data-fieldname="discount"]',
-                function () {
-                    const $row = $(this).closest("tr");
-                    const row_name = $row.attr("data-name");
-                    const row = locals["Purchase Items"][row_name];
-                    if (!row) return;
+        frm.fields_dict.table_qecz.grid.wrapper.on(
+            'input change',
+            'input[data-fieldname="quantity"], input[data-fieldname="price"], input[data-fieldname="discount"], select[data-fieldname="discount_type"]',
+            function () {
+                const $row = $(this).closest("tr");
+                const row_name = $row.attr("data-name");
+                const row = locals["Purchase Items"][row_name];
+                if (!row) return;
 
-                    row.quantity = parseFloat($row.find('input[data-fieldname="quantity"]').val() || 0);
-                    row.price = parseFloat($row.find('input[data-fieldname="price"]').val() || 0);
-                    row.discount = parseFloat($row.find('input[data-fieldname="discount"]').val() || 0);
+                row.quantity = parseFloat($row.find('input[data-fieldname="quantity"]').val() || 0);
+                row.price = parseFloat($row.find('input[data-fieldname="price"]').val() || 0);
+                row.discount = parseFloat($row.find('input[data-fieldname="discount"]').val() || 0);
 
-                    // Fetch available quantity if not already fetched
-                    if (row.service && row.available_qty === undefined) {
-                        frappe.db.get_value("Item", row.service, ["available_qty"])
-                            .then(r => {
-                                if (r && r.message) {
-                                    row.available_qty = flt(r.message.available_qty || 0);
-                                    validate_and_calculate(row, frm);
-                                }
-                            });
-                    } else {
-                        validate_and_calculate(row, frm);
-                    }
+                // Fetch available quantity if not already fetched
+                if (row.service && row.available_qty === undefined) {
+                    frappe.db.get_value("Item", row.service, ["available_qty"])
+                        .then(r => {
+                            if (r && r.message) {
+                                row.available_qty = flt(r.message.available_qty || 0);
+                                validate_and_calculate(row, frm);
+                            }
+                        });
+                } else {
+                    validate_and_calculate(row, frm);
                 }
-            );
-        }
+            }
+        );
+        // Batch delete listener (Toolbar button)
+        frm.fields_dict.table_qecz.grid.wrapper.on("click", ".grid-remove-rows", function () {
+            setTimeout(() => {
+                calculate_totals_live(frm);
+            }, 600);
+        });
 
         calculate_totals_live(frm);
     },
 
     overall_discount: function (frm) { calculate_totals_live(frm); },
     overall_discount_type: function (frm) { calculate_totals_live(frm); },
-
-    table_qecz_remove: function (frm) { calculate_totals_live(frm); },
 
     refresh(frm) {
         // Detect rounding mode from existing roundoff
@@ -148,7 +138,8 @@ function calculate_row_amount(row) {
     return taxable + row.tax_amount;
 }
 
-function calculate_totals_live(frm) {
+// =================== GRAND TOTAL CALCULATION ===================
+window.purchase_calculate_totals_live = function calculate_totals_live(frm) {
     let total_qty = 0.0;
     let total_amount = 0.0;
 
@@ -197,6 +188,9 @@ function calculate_totals_live(frm) {
 
     frm.refresh_field("total_qty");
     frm.refresh_field("total_amount");
+    frm.refresh_field("roundoff");
     frm.refresh_field("grand_total");
-    frm.refresh_field("balance_amount");
+    if (frm.fields_dict.balance_amount) {
+        frm.refresh_field("balance_amount");
+    }
 }

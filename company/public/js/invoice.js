@@ -33,22 +33,27 @@ frappe.ui.form.on("Invoice", {
 
         // Child table listeners
         frm.fields_dict.table_qecz.grid.wrapper.on(
-            "input",
-            'input[data-fieldname="quantity"], input[data-fieldname="price"], input[data-fieldname="discount"]',
+            "input change",
+            'input[data-fieldname="quantity"], input[data-fieldname="price"], input[data-fieldname="discount"], select[data-fieldname="discount_type"]',
             function () {
                 let row = locals["Invoice Items"][$(this).closest("tr").attr("data-name")];
                 validate_and_calculate(row, frm);
             }
         );
 
+        // Batch delete listener (Toolbar button)
+        frm.fields_dict.table_qecz.grid.wrapper.on("click", ".grid-remove-rows", function () {
+            setTimeout(() => {
+                calculate_totals_live(frm);
+            }, 600); // Wait for batch internal deletion to finish
+        });
+
         calculate_totals_live(frm);
     },
 
     overall_discount(frm) { calculate_totals_live(frm); },
     overall_discount_type(frm) { calculate_totals_live(frm); },
-    table_qecz_remove(frm, cdt, cdn) {
-        calculate_totals_live(frm, cdn);
-    },
+    table_qecz_add(frm) { calculate_totals_live(frm); },
 
     refresh(frm) {
         // Detect rounding mode from existing roundoff
@@ -122,7 +127,7 @@ function validate_and_calculate(row, frm) {
 // ======================================================
 // ROW CALCULATION (CLEAN VERSION)
 // ======================================================
-function calculate_row_amount_dynamic(row) {
+window.calculate_row_amount_dynamic = function calculate_row_amount_dynamic(row) {
 
     // Base amount
     let base = (row.quantity || 0) * (row.price || 0);
@@ -168,7 +173,7 @@ function calculate_row_amount_dynamic(row) {
 // ======================================================
 // GRAND TOTAL CALCULATION (CLEAN VERSION)
 // ======================================================
-function calculate_totals_live(frm, ignore_cdn) {
+window.calculate_totals_live = function calculate_totals_live(frm) {
 
     let qty = 0;
     let total = 0;
@@ -210,5 +215,18 @@ function calculate_totals_live(frm, ignore_cdn) {
     let final_gt = flt(natural_total + roundoff, 2);
     frm.set_value("grand_total", final_gt);
 
+    // Also update balance_amount in UI if it exists
+    if (frm.fields_dict.balance_amount) {
+        let paid_received = flt(frm.doc.received_amount || 0, 2);
+        frm.set_value('balance_amount', flt(final_gt - paid_received, 2));
+    }
 
+    // Explicitly refresh fields to ensure UI update
+    frm.refresh_field("total_qty");
+    frm.refresh_field("total_amount");
+    frm.refresh_field("roundoff");
+    frm.refresh_field("grand_total");
+    if (frm.fields_dict.balance_amount) {
+        frm.refresh_field("balance_amount");
+    }
 }
