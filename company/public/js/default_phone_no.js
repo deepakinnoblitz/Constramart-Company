@@ -20,15 +20,18 @@ function setup_phone_field(field, is_new) {
     // 2. 🇮🇳 Default +91 logic
     // if (!is_new) return;
 
-    // 🔒 Already initialized → never run again
-    if (field._phone_ui_initialized) return;
+    // 🔒 Already initialized for this record → never run again
+    const docname = field.frm?.docname || field.docname || "new";
+    const init_key = `_phone_ui_initialized_${docname}`;
+
+    if (field[init_key]) return;
 
     // 🚫 Skip if value exists (doc OR input)
     if (
         (field.get_value && field.get_value()) ||
         $input.val()
     ) {
-        field._phone_ui_initialized = true;
+        field[init_key] = true;
         return;
     }
 
@@ -40,7 +43,7 @@ function setup_phone_field(field, is_new) {
 
         // 🚫 User typed meanwhile → stop forever
         if ($input.val()) {
-            field._phone_ui_initialized = true;
+            field[init_key] = true;
             clearInterval(waitForFlag);
             return;
         }
@@ -77,8 +80,8 @@ function setup_phone_field(field, is_new) {
         const diff = len - 2;
         $input.css("padding-left", len > 2 ? 60 + diff * 7 : 60);
 
-        // ✅ Mark initialized — will NEVER run again
-        field._phone_ui_initialized = true;
+        // ✅ Mark initialized for this record
+        field[init_key] = true;
 
     }, 300);
 }
@@ -104,3 +107,4 @@ $(function () {
     });
 });
 
+    
