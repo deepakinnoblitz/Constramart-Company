@@ -99,7 +99,8 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Leads Type",
-   "options": "Select Lead type\nIncoming\nOutgoing",
+   "options": "\nIncoming\nOutgoing",
+   "placeholder": "Select Lead type",
    "reqd": 1
   },
   {
@@ -118,7 +119,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "New Lead\nContacted\nQualified\nProposal Sent\nIn Negotiation\nFollow-up Scheduled\nOn Hold\nNot Interested\nIn Active\nClosed"
+   "options": "New Lead\nFollow-up Scheduled\nClosed"
   },
   {
    "fieldname": "move_to_party",
@@ -186,13 +187,14 @@
    "fieldname": "business_person_name",
    "fieldtype": "Link",
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:19:19.138320",
+ "modified": "2026-02-10 12:57:45.757697",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Leads",

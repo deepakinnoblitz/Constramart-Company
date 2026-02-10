@@ -16,6 +16,8 @@ frappe.ui.form.on("Estimation",
             // Show button only when document is saved
             if (!frm.doc.__islocal) {
 
+                if(frm.doc.status !== 'Customer Rejected') {
+
                 frm.add_custom_button("Create Invoice", function () {
 
                     frappe.confirm(
@@ -45,7 +47,7 @@ frappe.ui.form.on("Estimation",
 
                 });
 
-
+                }
 
                 frm.add_custom_button("Preview PDF", function () {
 
