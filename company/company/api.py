@@ -2500,6 +2500,7 @@ def convert_lead_to_customer(lead_name):
     customer.remarks = lead.remarks
     customer.customer_type = "Sales"
     customer.lead = lead.name
+    customer.business_person_name = lead.business_person_name
     customer.owner_name = frappe.session.user
 
     customer.insert(ignore_permissions=True)
