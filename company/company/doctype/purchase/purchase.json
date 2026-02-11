@@ -234,7 +234,8 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_jhof",
@@ -251,7 +252,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-09 15:00:58.753116",
+ "modified": "2026-02-11 12:06:01.645871",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase",
