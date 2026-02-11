@@ -1,6 +1,7 @@
 // =================== PURCHASE FORM SCRIPT ===================
 frappe.ui.form.on("Purchase", {
     onload_post_render: function (frm) {
+        console.log("DEBUG: Purchase public script loaded");
 
         // Filter Vendor ID to only show Customers with customer_type = 'Purchase'
         frm.set_query("vendor_id", function () {
@@ -25,9 +26,9 @@ frappe.ui.form.on("Purchase", {
             frm.set_value("bill_date", frappe.datetime.get_today());
         }
 
-        // Live discount listeners
-        $(frm.fields_dict.overall_discount.input).on("input", () => calculate_totals_live(frm));
-        $(frm.fields_dict.overall_discount_type.input).on("change", () => calculate_totals_live(frm));
+        // Live discount listeners - CALLING UNIQUE PREFIXED FUNCTION
+        $(frm.fields_dict.overall_discount.input).on("input", () => purchase_calculate_totals_live(frm));
+        $(frm.fields_dict.overall_discount_type.input).on("change", () => purchase_calculate_totals_live(frm));
 
         // Live calculation for child table quantity/price/discount
         frm.fields_dict.table_qecz.grid.wrapper.on(
@@ -49,26 +50,27 @@ frappe.ui.form.on("Purchase", {
                         .then(r => {
                             if (r && r.message) {
                                 row.available_qty = flt(r.message.available_qty || 0);
-                                validate_and_calculate(row, frm);
+                                purchase_validate_and_calculate(row, frm);
                             }
                         });
                 } else {
-                    validate_and_calculate(row, frm);
+                    purchase_validate_and_calculate(row, frm);
                 }
             }
         );
         // Batch delete listener (Toolbar button)
         frm.fields_dict.table_qecz.grid.wrapper.on("click", ".grid-remove-rows", function () {
             setTimeout(() => {
-                calculate_totals_live(frm);
+                purchase_calculate_totals_live(frm);
             }, 600);
         });
 
-        calculate_totals_live(frm);
+        // Trigger initial calculation
+        purchase_calculate_totals_live(frm);
     },
 
-    overall_discount: function (frm) { calculate_totals_live(frm); },
-    overall_discount_type: function (frm) { calculate_totals_live(frm); },
+    overall_discount: function (frm) { purchase_calculate_totals_live(frm); },
+    overall_discount_type: function (frm) { purchase_calculate_totals_live(frm); },
 
     refresh(frm) {
         // Detect rounding mode from existing roundoff
@@ -95,34 +97,34 @@ frappe.ui.form.on("Purchase Items", {
                     row.hsn_code = r.message.item_code || "";
                     row.available_qty = flt(r.message.available_qty || 0);
                     row.description = r.message.item_name || "";
-                    row.sub_total = calculate_row_amount(row);
+                    row.sub_total = purchase_calculate_row_amount(row);
                     frm.refresh_field("table_qecz");
-                    calculate_totals_live(frm);
+                    purchase_calculate_totals_live(frm);
                 }
             });
     },
 
-    quantity: function (frm, cdt, cdn) { child_update(frm, cdt, cdn); },
-    price: function (frm, cdt, cdn) { child_update(frm, cdt, cdn); },
-    discount: function (frm, cdt, cdn) { child_update(frm, cdt, cdn); },
-    discount_type: function (frm, cdt, cdn) { child_update(frm, cdt, cdn); },
-    tax_type: function (frm, cdt, cdn) { child_update(frm, cdt, cdn); }
+    quantity: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
+    price: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
+    discount: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
+    discount_type: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
+    tax_type: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); }
 });
 
 // =================== HELPER FUNCTIONS ===================
-function child_update(frm, cdt, cdn) {
+function purchase_child_update(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
     if (!row) return;
-    validate_and_calculate(row, frm);
+    purchase_validate_and_calculate(row, frm);
 }
 
-function validate_and_calculate(row, frm) {
-    row.sub_total = calculate_row_amount(row);
+function purchase_validate_and_calculate(row, frm) {
+    row.sub_total = purchase_calculate_row_amount(row);
     frm.refresh_field("table_qecz");
-    calculate_totals_live(frm);
+    purchase_calculate_totals_live(frm);
 }
 
-function calculate_row_amount(row) {
+function purchase_calculate_row_amount(row) {
     let base_amount = (row.quantity || 0) * (row.price || 0);
 
     let discount_amt = 0;
@@ -139,13 +141,15 @@ function calculate_row_amount(row) {
 }
 
 // =================== GRAND TOTAL CALCULATION ===================
-window.purchase_calculate_totals_live = function calculate_totals_live(frm) {
+// Attaching to window WITH UNIQUE PREFIX to avoid conflict with Invoice logic
+window.purchase_calculate_totals_live = function (frm) {
+    console.log("EXEC: purchase_calculate_totals_live (Isolated Version)");
+
     let total_qty = 0.0;
     let total_amount = 0.0;
 
     (frm.doc.table_qecz || []).forEach(row => {
         total_qty += flt(row.quantity, 2);
-        // Sum rounded subtotals to avoid floating point drift (Accounting Standard)
         total_amount += flt(row.sub_total, 2);
     });
 
@@ -160,16 +164,13 @@ window.purchase_calculate_totals_live = function calculate_totals_live(frm) {
         natural_total = total_amount - (total_amount * discount_val / 100);
     }
 
-    // Prevent negative total
     natural_total = natural_total < 0 ? 0.0 : flt(natural_total, 2);
 
     frm.set_value("total_qty", flt(total_qty, 2));
     frm.set_value("total_amount", flt(total_amount, 2));
 
-    // Always update grand_total by adding roundoff to the natural total
     let roundoff = flt(frm.doc.roundoff || 0, 2);
 
-    // Apply persistent rounding mode if active
     if (frm._rounding_mode) {
         if (frm._rounding_mode === 'floor') roundoff = flt(Math.floor(natural_total) - natural_total, 2);
         else if (frm._rounding_mode === 'ceil') roundoff = flt(Math.ceil(natural_total) - natural_total, 2);
@@ -180,19 +181,28 @@ window.purchase_calculate_totals_live = function calculate_totals_live(frm) {
     let final_gt = flt(natural_total + roundoff, 2);
     frm.set_value("grand_total", final_gt);
 
-    // Update balance_amount (match invoice functionality)
+    // Update balance_amount
     if (frm.fields_dict.balance_amount) {
         let paid = flt(frm.doc.paid_amount, 2);
 
-        // Robustness: If model is 0 but UI field has a value, use UI value
-        // This prevents resetting balance to GT if frm.doc.paid_amount is stale
+        // Robustness 1: If model is 0 but UI field has value, trust the field
         if (paid === 0 && frm.fields_dict.paid_amount && flt(frm.fields_dict.paid_amount.get_value(), 2) > 0) {
             paid = flt(frm.fields_dict.paid_amount.get_value(), 2);
         }
 
+        // Robustness 2: CRITICAL - If paid is 0 but an existing balance exists on the doc, 
+        // deduce the paid amount from (Original Grand Total - Original Balance).
+        // This prevents overwriting a correct balance with the grand total during form load.
+        if (paid === 0 && !frm.is_new() && frm.doc.balance_amount && flt(frm.doc.balance_amount, 2) < final_gt) {
+            paid = flt(final_gt - flt(frm.doc.balance_amount, 2), 2);
+            console.log("DEBUG: Deduced paid amount from doc state:", paid);
+        }
+
         let balance = flt(final_gt - paid, 2);
 
-        // Explicitly check to avoid overwriting correct balance with GT if paid_amount is temporarily 0/unset
+        // Log calculation for debugging
+        console.log("DEBUG: Balance Calculation -> GT:", final_gt, "Paid:", paid, "Result:", balance);
+
         if (flt(frm.doc.balance_amount, 2) !== balance) {
             frm.set_value('balance_amount', balance);
         }

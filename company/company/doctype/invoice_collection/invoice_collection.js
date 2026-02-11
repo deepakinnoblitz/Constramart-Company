@@ -100,6 +100,22 @@ frappe.ui.form.on("Invoice Collection", {
                 indicator: "blue"
             });
         }
+    },
+    after_save: function (frm) {
+        if (frm.doc.invoice) {
+            frappe.show_alert({
+                message: __("Invoice {0} updated", [frm.doc.invoice]),
+                indicator: "green"
+            });
+
+            // Redirect back to Invoice and reload it
+            frappe.set_route("Form", "Invoice", frm.doc.invoice).then(() => {
+                const parent_frm = cur_frm;
+                if (parent_frm && parent_frm.doctype === "Invoice" && parent_frm.docname === frm.doc.invoice) {
+                    parent_frm.reload_doc();
+                }
+            });
+        }
     }
 });
 

@@ -38,6 +38,7 @@ frappe.ui.form.on("Purchase", {
 
             // Collection Management Buttons
             if (flt(frm.doc.balance_amount, 2) > 0) {
+                console.log('balance amount : ' + frm.doc.balance_amount);
                 frm.add_custom_button(__("Create Collection"), function () {
                     frappe.new_doc("Purchase Collection", {
                         purchase: frm.doc.name,
