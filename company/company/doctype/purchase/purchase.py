@@ -62,7 +62,10 @@ class Purchase(Document):
         
         # Sync Paid Amount and Balance Amount (Final Authority - Always recalculate on save)
         if self.name:
-            total_paid = frappe.db.get_value("Purchase Collection", {"purchase": self.name}, "sum(amount_paid)") or 0
+            total_paid = frappe.db.sql("""
+                SELECT SUM(amount_paid) FROM `tabPurchase Collection`
+                WHERE purchase = %s
+            """, (self.name,))[0][0] or 0
             self.paid_amount = frappe.utils.flt(total_paid)
         else:
             self.paid_amount = 0
