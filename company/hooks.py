@@ -1,5 +1,5 @@
 app_name = "company"
-app_title = "Innoblitz"
+app_title = "Constrmart"
 app_publisher = "deepak"
 app_description = "Company "
 app_email = "deepak@gmail.com"
