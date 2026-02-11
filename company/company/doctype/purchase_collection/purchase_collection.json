@@ -137,13 +137,14 @@
    "fieldname": "business_person",
    "fieldtype": "Link",
    "label": "Business Person",
-   "options": "Business Person"
+   "options": "Business Person",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:27:58.527261",
+ "modified": "2026-02-11 10:59:45.582902",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Collection",

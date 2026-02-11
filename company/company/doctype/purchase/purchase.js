@@ -35,6 +35,26 @@ frappe.ui.form.on("Purchase", {
                     $(".indicator-pill:contains('Not Saved')").hide();
                 }
             });
+
+            // Collection Management Buttons
+            if (flt(frm.doc.balance_amount, 2) > 0) {
+                frm.add_custom_button(__("Create Collection"), function () {
+                    frappe.new_doc("Purchase Collection", {
+                        purchase: frm.doc.name,
+                        vendor_id: frm.doc.vendor_id,
+                        vendor_name: frm.doc.vendor_name,
+                        business_person: frm.doc.business_person_name,
+                        amount_to_pay: frm.doc.balance_amount,
+                        payment_date: frappe.datetime.get_today()
+                    });
+                }, __("Collections"));
+            }
+
+            frm.add_custom_button(__("View Collections"), function () {
+                frappe.set_route("List", "Purchase Collection", {
+                    "purchase": frm.doc.name
+                });
+            }, __("Collections"));
         }
     },
     table_qecz_remove(frm) {

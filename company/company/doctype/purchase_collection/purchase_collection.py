@@ -52,14 +52,14 @@ class PurchaseCollection(Document):
 		purchase = frappe.get_doc("Purchase", self.purchase)
 		
 		# Calculate total paid amount from all Purchase Collection records
-		total_paid = frappe.db.sql("""
+		total_paid = frappe.utils.flt(frappe.db.sql("""
 			SELECT SUM(amount_paid) as total
 			FROM `tabPurchase Collection`
 			WHERE purchase = %s
-		""", (self.purchase,))[0][0] or 0
+		""", (self.purchase,))[0][0] or 0)
 		
-		# Calculate balance
-		balance = purchase.grand_total - total_paid
+		grand_total = frappe.utils.flt(purchase.grand_total)
+		balance = grand_total - total_paid
 		
 		# Determine purchase status
 		if total_paid == 0:
@@ -69,10 +69,12 @@ class PurchaseCollection(Document):
 		else:
 			status = "Fully Paid"
 		
-		# Update Purchase fields
-		purchase.db_set("paid_amount", total_paid, update_modified=False)
-		purchase.db_set("balance_amount", balance, update_modified=False)
-		purchase.db_set("purchase_status", status, update_modified=False)
+		# Update Purchase fields atomically
+		frappe.db.set_value("Purchase", self.purchase, {
+			"paid_amount": total_paid,
+			"balance_amount": balance,
+			"purchase_status": status
+		})
 		
 		frappe.db.commit()
 

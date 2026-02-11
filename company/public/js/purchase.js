@@ -180,10 +180,22 @@ window.purchase_calculate_totals_live = function calculate_totals_live(frm) {
     let final_gt = flt(natural_total + roundoff, 2);
     frm.set_value("grand_total", final_gt);
 
-    // Update balance_amount
+    // Update balance_amount (match invoice functionality)
     if (frm.fields_dict.balance_amount) {
-        let paid = flt(frm.doc.paid_amount || 0, 2);
-        frm.set_value('balance_amount', flt(final_gt - paid, 2));
+        let paid = flt(frm.doc.paid_amount, 2);
+
+        // Robustness: If model is 0 but UI field has a value, use UI value
+        // This prevents resetting balance to GT if frm.doc.paid_amount is stale
+        if (paid === 0 && frm.fields_dict.paid_amount && flt(frm.fields_dict.paid_amount.get_value(), 2) > 0) {
+            paid = flt(frm.fields_dict.paid_amount.get_value(), 2);
+        }
+
+        let balance = flt(final_gt - paid, 2);
+
+        // Explicitly check to avoid overwriting correct balance with GT if paid_amount is temporarily 0/unset
+        if (flt(frm.doc.balance_amount, 2) !== balance) {
+            frm.set_value('balance_amount', balance);
+        }
     }
 
     frm.refresh_field("total_qty");
