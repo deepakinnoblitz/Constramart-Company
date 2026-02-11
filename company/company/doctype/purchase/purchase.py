@@ -59,3 +59,20 @@ class Purchase(Document):
             total = 0
 
         self.grand_total = total + (frappe.utils.flt(self.roundoff) if hasattr(self, 'roundoff') else 0)
+        
+        # Sync Paid Amount and Balance Amount (Final Authority - Always recalculate on save)
+        if self.name:
+            total_paid = frappe.db.get_value("Purchase Collection", {"purchase": self.name}, "sum(amount_paid)") or 0
+            self.paid_amount = frappe.utils.flt(total_paid)
+        else:
+            self.paid_amount = 0
+            
+        self.balance_amount = frappe.utils.flt(self.grand_total) - self.paid_amount
+        
+        # Update status
+        if self.paid_amount == 0:
+            self.purchase_status = "Pending"
+        elif self.balance_amount > 0:
+            self.purchase_status = "Partially Paid"
+        else:
+            self.purchase_status = "Fully Paid"
