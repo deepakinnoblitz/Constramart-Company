@@ -70,5 +70,21 @@ frappe.ui.form.on("Purchase Collection", {
                 frm.set_value("amount_pending", pay - paid_now);
             });
         }
+    },
+    after_save: function (frm) {
+        if (frm.doc.purchase) {
+            frappe.show_alert({
+                message: __("Purchase {0} updated", [frm.doc.purchase]),
+                indicator: "green"
+            });
+
+            // Redirect back to Purchase and reload it
+            frappe.set_route("Form", "Purchase", frm.doc.purchase).then(() => {
+                const parent_frm = cur_frm;
+                if (parent_frm && parent_frm.doctype === "Purchase" && parent_frm.docname === frm.doc.purchase) {
+                    parent_frm.reload_doc();
+                }
+            });
+        }
     }
 });
