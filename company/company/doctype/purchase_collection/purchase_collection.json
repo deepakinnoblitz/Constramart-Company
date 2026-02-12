@@ -33,6 +33,7 @@
    "in_standard_filter": 1,
    "label": "Purchase",
    "options": "Purchase",
+   "read_only_depends_on": "eval:!doc.__islocal",
    "reqd": 1
   },
   {
@@ -144,7 +145,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-11 10:59:45.582902",
+ "modified": "2026-02-12 10:51:50.138457",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Collection",
