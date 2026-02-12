@@ -1,41 +1,41 @@
 {
- "app": "company",
- "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Expense Reports\"}}]",
- "creation": "2025-10-13 11:19:59.267993",
- "custom_blocks": [],
- "docstatus": 0,
- "doctype": "Workspace",
- "external_link": "https://erp.constramart.com/app/query-report/Expense%20Report",
- "for_user": "",
- "hide_custom": 0,
- "icon": "clipboard",
- "idx": 0,
- "indicator_color": "green",
- "is_hidden": 1,
- "label": "Expense Reports",
- "link_to": "Expenses Report",
- "link_type": "Report",
- "links": [],
- "modified": "2026-02-10 18:38:18.353131",
- "modified_by": "Administrator",
- "module": "Company",
- "name": "Expense Reports",
- "number_cards": [],
- "owner": "Administrator",
- "parent_page": "Analytics Report",
- "public": 1,
- "quick_lists": [],
- "roles": [
-  {
-   "role": "Sales"
-  },
-  {
-   "role": "Sales Employee"
-  }
- ],
- "sequence_id": 41.0,
- "shortcuts": [],
- "title": "Expense Reports",
- "type": "URL"
+    "app": "company",
+    "charts": [],
+    "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Expense Reports\"}}]",
+    "creation": "2025-10-13 11:19:59.267993",
+    "custom_blocks": [],
+    "docstatus": 0,
+    "doctype": "Workspace",
+    "external_link": "http://erp.localhost.innoblitz:8019/app/query-report/Expense%20Report",
+    "for_user": "",
+    "hide_custom": 0,
+    "icon": "clipboard",
+    "idx": 0,
+    "indicator_color": "green",
+    "is_hidden": 1,
+    "label": "Expense Reports",
+    "link_to": "Expenses Report",
+    "link_type": "Report",
+    "links": [],
+    "modified": "2026-02-10 18:38:18.353131",
+    "modified_by": "Administrator",
+    "module": "Company",
+    "name": "Expense Reports",
+    "number_cards": [],
+    "owner": "Administrator",
+    "parent_page": "Analytics Report",
+    "public": 1,
+    "quick_lists": [],
+    "roles": [
+        {
+            "role": "Sales"
+        },
+        {
+            "role": "Sales Employee"
+        }
+    ],
+    "sequence_id": 41.0,
+    "shortcuts": [],
+    "title": "Expense Reports",
+    "type": "URL"
 }

@@ -1,41 +1,41 @@
 {
- "app": "company",
- "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Sales Analytics\"}}]",
- "creation": "2025-10-13 11:17:52.102738",
- "custom_blocks": [],
- "docstatus": 0,
- "doctype": "Workspace",
- "external_link": "https://erp.constramart.com/app/query-report/Sales%20Analytics",
- "for_user": "",
- "hide_custom": 0,
- "icon": "crm",
- "idx": 0,
- "indicator_color": "green",
- "is_hidden": 0,
- "label": "Sales Analytics",
- "link_to": "sales-report",
- "link_type": "Page",
- "links": [],
- "modified": "2026-02-10 18:39:28.586414",
- "modified_by": "Administrator",
- "module": "Company",
- "name": "Sales Analytics",
- "number_cards": [],
- "owner": "Administrator",
- "parent_page": "Analytics Report",
- "public": 1,
- "quick_lists": [],
- "roles": [
-  {
-   "role": "Sales"
-  },
-  {
-   "role": "Sales Employee"
-  }
- ],
- "sequence_id": 39.0,
- "shortcuts": [],
- "title": "Sales Analytics",
- "type": "URL"
+    "app": "company",
+    "charts": [],
+    "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Sales Analytics\"}}]",
+    "creation": "2025-10-13 11:17:52.102738",
+    "custom_blocks": [],
+    "docstatus": 0,
+    "doctype": "Workspace",
+    "external_link": "http://erp.localhost.innoblitz:8019/app/query-report/Sales%20Analytics",
+    "for_user": "",
+    "hide_custom": 0,
+    "icon": "crm",
+    "idx": 0,
+    "indicator_color": "green",
+    "is_hidden": 0,
+    "label": "Sales Analytics",
+    "link_to": "sales-report",
+    "link_type": "Page",
+    "links": [],
+    "modified": "2026-02-10 18:39:28.586414",
+    "modified_by": "Administrator",
+    "module": "Company",
+    "name": "Sales Analytics",
+    "number_cards": [],
+    "owner": "Administrator",
+    "parent_page": "Analytics Report",
+    "public": 1,
+    "quick_lists": [],
+    "roles": [
+        {
+            "role": "Sales"
+        },
+        {
+            "role": "Sales Employee"
+        }
+    ],
+    "sequence_id": 39.0,
+    "shortcuts": [],
+    "title": "Sales Analytics",
+    "type": "URL"
 }
