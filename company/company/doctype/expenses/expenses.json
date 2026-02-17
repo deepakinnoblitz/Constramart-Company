@@ -8,12 +8,12 @@
  "field_order": [
   "section_break_zylu",
   "business_person",
-  "section_break_jkob",
   "expense_no",
+  "section_break_jkob",
   "expense_category",
+  "payment_type",
   "column_break_gvbq",
   "date",
-  "payment_type",
   "section_break_hxmz",
   "table_qecz",
   "section_break_pjmz",
@@ -23,10 +23,11 @@
  "fields": [
   {
    "fieldname": "expense_category",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Expense Category",
+   "options": "Expense Category",
    "reqd": 1
   },
   {
@@ -90,9 +91,9 @@
   {
    "fieldname": "business_person",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Business Person",
-   "options": "Business Person",
-   "reqd": 1
+   "options": "Business Person"
   },
   {
    "fieldname": "section_break_jkob",
@@ -102,7 +103,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-09 16:30:59.770934",
+ "modified": "2026-02-17 12:31:51.358887",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Expenses",
