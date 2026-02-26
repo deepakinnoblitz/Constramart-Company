@@ -5,8 +5,28 @@ frappe.query_reports["Sales vs purchase"] = {
     auto_run: true,
 
     filters: [
-        { fieldname: "page", fieldtype: "Int", default: 1, hidden: 1 },
-        { fieldname: "page_length", fieldtype: "Int", default: 10, hidden: 1 },
+        {
+            fieldname: "page",
+            label: __("Page No"),
+            fieldtype: "Int",
+            default: 1,
+            hidden: 1
+        },
+        {
+            fieldname: "page_length",
+            label: __("Page Size"),
+            fieldtype: "Select",
+            options: [
+                { label: "10", value: 10 },
+                { label: "20", value: 20 },
+                { label: "50", value: 50 },
+                { label: "100", value: 100 },
+                { label: "500", value: 500 },
+                { label: "All", value: 999999 }
+            ],
+            default: "10",
+            hidden: 1
+        },
         {
             fieldname: "from_date",
             label: __("From Date"),
@@ -54,8 +74,6 @@ frappe.query_reports["Sales vs purchase"] = {
     ],
 
     onload(report) {
-        report.set_filter_value("page_length", 10);
-
         report._prev_btn = report.page.add_inner_button("⬅ Prev", () => {
             const page = report.get_filter_value("page");
             if (page > 1) {
@@ -69,6 +87,36 @@ frappe.query_reports["Sales vs purchase"] = {
             report.set_filter_value("page", page + 1);
             report.refresh();
         });
+
+        // Ensure "All" data is exported even when view is paginated and filters are hidden
+        report.export_report = () => {
+            const dialog = frappe.report_utils.get_export_dialog(
+                __(report.report_name),
+                [],
+                ({ file_format }) => {
+                    const filters = report.get_filter_values(true);
+                    // Force full data for export
+                    filters.page_length = 999999;
+                    filters.page = 1;
+                    filters.is_export = 1;
+
+                    const args = {
+                        cmd: "frappe.desk.query_report.export_query",
+                        report_name: report.report_name,
+                        file_format_type: file_format,
+                        filters: filters,
+                        visible_idx: [], // Clear this to ensure server sends everything
+                        is_export: 1,    // Signal to backend
+                        include_indentation: 0,
+                        include_filters: 0,
+                        export_in_background: 0
+                    };
+
+                    open_url_post(frappe.request.url, args);
+                }
+            );
+            dialog.show();
+        };
     },
 
     after_refresh(report) {
