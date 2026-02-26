@@ -9,18 +9,33 @@ def execute(filters=None):
     filters = filters or {}
 
     # -------------------------------
-    # PAGINATION
+    # PAGINATION (Skip if exporting)
     # -------------------------------
+    # Detect if we are exporting
+    is_export = (
+        frappe.flags.is_export 
+        or frappe.form_dict.get("is_export") in ["true", "1"]
+        or filters.get("is_export") in ["true", "1", 1]
+        or frappe.form_dict.get("file_format_type") is not None
+        or frappe.form_dict.get("cmd") == "frappe.desk.query_report.export_query"
+    )
+
     page = int(filters.get("page", 1))
     page_length = int(filters.get("page_length", 10))
     offset = (page - 1) * page_length
 
     columns = get_columns()
-    data = get_data(filters, limit=page_length, offset=offset)
     
-    # Calculate row numbers
-    for i, row in enumerate(data, start=offset + 1):
-        row["row_no"] = i
+    if is_export:
+        data = get_data(filters, limit=None, offset=None)
+        # For export, row numbers should start from 1
+        for i, row in enumerate(data, start=1):
+            row["row_no"] = i
+    else:
+        data = get_data(filters, limit=page_length, offset=offset)
+        # Calculate row numbers for paginated view
+        for i, row in enumerate(data, start=offset + 1):
+            row["row_no"] = i
 
     # Total Count logic (approximate for pagination)
     total_count = get_total_count(filters)

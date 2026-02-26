@@ -10,8 +10,16 @@ def execute(filters=None):
     filters = filters or {}
 
     # -------------------------------
-    # PAGINATION
+    # PAGINATION (Skip if exporting)
     # -------------------------------
+    is_export = (
+        frappe.flags.is_export 
+        or frappe.form_dict.get("is_export") in ["true", "1"]
+        or filters.get("is_export") in ["true", "1", 1]
+        or frappe.form_dict.get("file_format_type") is not None
+        or frappe.form_dict.get("cmd") == "frappe.desk.query_report.export_query"
+    )
+
     page = int(filters.get("page", 1))
     page_length = int(filters.get("page_length", 10))
     offset = (page - 1) * page_length
@@ -66,6 +74,8 @@ def execute(filters=None):
     # -------------------------------
     # MAIN QUERY (CORRECT PAGINATION)
     # -------------------------------
+    limit_clause = "LIMIT %(limit)s OFFSET %(offset)s" if not is_export else ""
+
     data = frappe.db.sql(
         f"""
         SELECT
@@ -74,10 +84,8 @@ def execute(filters=None):
             inv.customer_id,
             cust.customer_name,
             inv.billing_name,
-
             SUM(child.quantity) AS qty,
             SUM(child.sub_total) / NULLIF(SUM(child.quantity), 0) AS price,
-
             inv.grand_total,
             inv.received_amount,
             inv.balance_amount
@@ -87,7 +95,7 @@ def execute(filters=None):
         {where_clause}
         GROUP BY inv.name
         ORDER BY inv.invoice_date DESC, inv.name DESC
-        LIMIT %(limit)s OFFSET %(offset)s
+        {limit_clause}
         """,
         {**values, "limit": page_length, "offset": offset},
         as_dict=True,
@@ -96,8 +104,12 @@ def execute(filters=None):
     # -------------------------------
     # ROW NUMBERS
     # -------------------------------
-    for i, row in enumerate(data, start=offset + 1):
-        row["row_no"] = i
+    if is_export:
+        for i, row in enumerate(data, start=1):
+            row["row_no"] = i
+    else:
+        for i, row in enumerate(data, start=offset + 1):
+            row["row_no"] = i
 
     # -------------------------------
     # TOTAL COUNT (INVOICES)

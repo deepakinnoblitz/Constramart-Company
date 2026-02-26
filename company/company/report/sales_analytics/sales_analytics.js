@@ -62,6 +62,36 @@ frappe.query_reports["Sales Analytics"] = {
             report.set_filter_value("page", page + 1);
             report.refresh();
         });
+
+        // Ensure "All" data is exported even when view is paginated and filters are hidden
+        report.export_report = () => {
+            const dialog = frappe.report_utils.get_export_dialog(
+                __(report.report_name),
+                [],
+                ({ file_format }) => {
+                    const filters = report.get_filter_values(true);
+                    // Force full data for export
+                    filters.page_length = 999999;
+                    filters.page = 1;
+                    filters.is_export = 1;
+
+                    const args = {
+                        cmd: "frappe.desk.query_report.export_query",
+                        report_name: report.report_name,
+                        file_format_type: file_format,
+                        filters: filters,
+                        visible_idx: [], // Clear this to ensure server sends everything
+                        is_export: 1,    // Signal to backend
+                        include_indentation: 0,
+                        include_filters: 0,
+                        export_in_background: 0
+                    };
+
+                    open_url_post(frappe.request.url, args);
+                }
+            );
+            dialog.show();
+        };
     },
 
     // ----------------------------
