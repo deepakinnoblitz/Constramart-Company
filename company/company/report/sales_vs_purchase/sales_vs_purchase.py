@@ -64,6 +64,8 @@ def get_columns():
         {"fieldname": "purchase_amount", "label": "Purchase Amt", "fieldtype": "Currency", "width": 120},
         {"fieldname": "gross_profit", "label": "Profit", "fieldtype": "Currency", "width": 110},
         {"fieldname": "margin_percent", "label": "Margin %", "fieldtype": "Percent", "width": 90},
+        {"fieldname": "sales_business_person", "label": "Sales BP", "fieldtype": "Link", "options": "Business Person", "width": 130},
+        {"fieldname": "purchase_business_person", "label": "Purchase BP", "fieldtype": "Data", "width": 150},
     ]
 
 
@@ -90,9 +92,13 @@ def get_data(filters, limit=None, offset=None):
             CASE 
                 WHEN inv.grand_total > 0 THEN ((inv.grand_total - SUM(COALESCE(pur.grand_total, 0))) / inv.grand_total) * 100
                 ELSE 0 
-            END as margin_percent
+            END as margin_percent,
+            sbp.business_person_name as sales_business_person,
+            GROUP_CONCAT(DISTINCT pbp.business_person_name) as purchase_business_person
         FROM `tabInvoice` inv
         LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR inv.purchase_id = pur.name)
+        LEFT JOIN `tabBusiness Person` sbp ON sbp.name = inv.business_person_name
+        LEFT JOIN `tabBusiness Person` pbp ON pbp.name = pur.business_person_name
         {conditions}
         GROUP BY inv.name
         {having_clause}
@@ -124,6 +130,14 @@ def get_conditions(filters):
         # We need a subquery or stay with the join
         conditions.append("EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR inv.purchase_id = p.name) AND p.vendor_id = %(vendor)s)")
         values["vendor"] = filters["vendor"]
+
+    if filters.get("sales_business_person"):
+        conditions.append("inv.business_person_name = %(sales_business_person)s")
+        values["sales_business_person"] = filters["sales_business_person"]
+
+    if filters.get("purchase_business_person"):
+        conditions.append("EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR inv.purchase_id = p.name) AND p.business_person_name = %(purchase_business_person)s)")
+        values["purchase_business_person"] = filters["purchase_business_person"]
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
     return where_clause, values
@@ -173,6 +187,7 @@ def get_report_summary(filters):
     avg_margin = (total_profit / total_sales * 100) if total_sales > 0 else 0
 
     return [
+        {"label": "Total Invoice and Purchase", "value": get_total_count(filters), "indicator": "blue", "datatype": "Int"},
         {"label": "Total Revenue", "value": total_sales, "indicator": "blue", "datatype": "Currency"},
         {"label": "Total Purchase Cost", "value": total_purchase, "indicator": "red", "datatype": "Currency"},
         {"label": "Gross Profit", "value": total_profit, "indicator": "green" if total_profit >= 0 else "red", "datatype": "Currency"},

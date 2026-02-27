@@ -57,6 +57,12 @@ frappe.query_reports["Purchase Report"] = {
             label: __("Purchase Status"),
             fieldtype: "Select",
             options: "\nPending\nPartially Paid\nFully Paid"
+        },
+        {
+            fieldname: "business_person_name",
+            label: __("Business Person"),
+            fieldtype: "Link",
+            options: "Business Person"
         }
     ],
 

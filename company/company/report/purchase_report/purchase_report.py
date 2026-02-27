@@ -90,6 +90,8 @@ def execute(filters=None):
             "fieldtype": "Data",
             "width": 130,
         },
+        {"fieldname": "business_person_name", "label": "Business Person", "fieldtype": "Link", "options": "Business Person", "width": 150},
+
     ]
 
     # ---------------------------------------------
@@ -131,6 +133,10 @@ def execute(filters=None):
             # GST = any tax other than Exempted
             conditions.append("p.default_tax_type != 'Exempted'")
 
+    if filters.get("business_person_name"):
+        conditions.append("p.business_person_name = %(business_person_name)s")
+        values["business_person_name"] = filters["business_person_name"]
+
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
     # ---------------------------------------------
@@ -149,12 +155,14 @@ def execute(filters=None):
             SUM(i.quantity)     AS qty,
             SUM(i.sub_total) / NULLIF(SUM(i.quantity), 0) AS price,
             p.grand_total,
+            bp.business_person_name AS business_person_name,
             p.paid_amount,
             p.balance_amount,
             p.purchase_status
         FROM `tabPurchase` p
         LEFT JOIN `tabPurchase Items` i
             ON i.parent = p.name
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = p.business_person_name
         {where_clause}
         GROUP BY p.name
         ORDER BY p.bill_date DESC, p.creation DESC
@@ -206,6 +214,12 @@ def execute(filters=None):
     pending_percent = (total_pending / total_purchase * 100) if total_purchase else 0
 
     report_summary = [
+        {
+            "label": "Total Purchases",
+            "value": total_count,
+            "indicator": "blue",
+            "datatype": "Int",
+        },
         {
             "label": "Total Purchase Amount",
             "value": total_purchase,

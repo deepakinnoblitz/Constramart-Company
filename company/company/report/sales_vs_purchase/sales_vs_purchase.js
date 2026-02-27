@@ -69,7 +69,20 @@ frappe.query_reports["Sales vs purchase"] = {
             fieldname: "only_linked",
             label: __("Only Linked"),
             fieldtype: "Check",
-            default: 1
+            default: 1,
+            hidden: 1
+        },
+        {
+            fieldname: "sales_business_person",
+            label: __("Sales Business Person"),
+            fieldtype: "Link",
+            options: "Business Person"
+        },
+        {
+            fieldname: "purchase_business_person",
+            label: __("Purchase Business Person"),
+            fieldtype: "Link",
+            options: "Business Person"
         }
     ],
 
@@ -137,6 +150,25 @@ frappe.query_reports["Sales vs purchase"] = {
             if (report._next_btn) {
                 report._next_btn.prop("disabled", is_last_page);
             }
+
+            // Safety: if user is on a high page after filtering and sees no data
+            if (rows.length === 0 && page > 1) {
+                report.set_filter_value("page", 1);
+                report.refresh();
+            }
         }, 0);
-    }
+    },
+
+    filters_config: [
+        {
+            "setup": function (report) {
+                report.page.fields_dict.from_date.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.to_date.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.customer.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.vendor.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.sales_business_person.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.purchase_business_person.$input.on("change", () => report.set_filter_value("page", 1));
+            }
+        }
+    ]
 };
