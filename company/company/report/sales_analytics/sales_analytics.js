@@ -24,8 +24,10 @@ frappe.query_reports["Sales Analytics"] = {
         {
             fieldname: "customer",
             label: __("Customer"),
-            fieldtype: "Link",
-            options: "Customer"
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Customer", txt);
+            }
         },
         {
             fieldname: "billing_name",

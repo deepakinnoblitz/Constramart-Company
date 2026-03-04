@@ -57,8 +57,16 @@ def execute(filters=None):
         values["to_date"] = filters["to_date"]
 
     if filters.get("customer"):
-        conditions.append("inv.customer_id = %(customer)s")
-        values["customer"] = filters["customer"]
+        customer = filters["customer"]
+        if isinstance(customer, list):
+            # Multiple customers selected — use IN clause
+            placeholders = ", ".join([f"%(customer_{i})s" for i in range(len(customer))])
+            conditions.append(f"inv.customer_id IN ({placeholders})")
+            for i, c in enumerate(customer):
+                values[f"customer_{i}"] = c
+        else:
+            conditions.append("inv.customer_id = %(customer)s")
+            values["customer"] = customer
 
     if filters.get("billing_name"):
         conditions.append("inv.billing_name LIKE %(billing_name)s")
