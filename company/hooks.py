@@ -26,7 +26,7 @@ app_include_js = [
     "/assets/company/js/custom_link_formatter.js",
     # "/assets/company/js/custom_badge.js",
     "/assets/company/js/custom_back_button.js",
-    "/assets/company/js/birthday_animation.js",
+    # "/assets/company/js/birthday_animation.js",
     "/assets/company/js/custom-sidebar-menu.js",
     "/assets/company/js/default_phone_no.js",
     "/assets/company/js/logo.js", 

@@ -212,10 +212,10 @@
   {
    "fieldname": "default_tax_type",
    "fieldtype": "Link",
-   "hidden": 1,
+   "hidden": 0,
    "label": "Default Tax Type",
    "options": "Tax Types",
-   "read_only": 1
+   "read_only": 0
   },
   {
    "fieldname": "section_break_kiex",

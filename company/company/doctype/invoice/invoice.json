@@ -297,8 +297,7 @@
    "fieldname": "default_tax_type",
    "fieldtype": "Link",
    "label": "Default Tax Type",
-   "options": "Tax Types",
-   "read_only": 1
+   "options": "Tax Types"
   },
   {
    "fieldname": "company_name",
@@ -342,7 +341,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-10 16:27:01.904461",
+ "modified": "2026-03-10 16:29:45.086313",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice",

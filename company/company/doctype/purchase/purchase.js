@@ -9,6 +9,44 @@ frappe.ui.form.on("Purchase", {
         }
     },
     refresh(frm) {
+        // Use set_query with dynamic doc evaluation for grid filters
+        frm.set_query("tax_type", "table_qecz", function (doc, cdt, cdn) {
+            if (doc.default_tax_type === "Exempted") {
+                return {
+                    filters: {
+                        "name": "Exempted"
+                    }
+                };
+            } else if (doc.default_tax_type) {
+                return {
+                    filters: {
+                        "name": ["!=", "Exempted"]
+                    }
+                };
+            }
+            return {};
+        });
+
+        // SMART LIVE REFRESH: Instantly commit empty values when cleared
+        // This ensures the parent updates exactly when the text is cleared, without needing blur
+        frm.fields_dict.table_qecz.grid.wrapper.on("input",
+            'input[data-fieldname="service"], input[data-fieldname="tax_type"]',
+            function () {
+                let val = $(this).val();
+                if (!val) {
+                    let $row = $(this).closest('.grid-row');
+                    let docname = $row.attr('data-name');
+                    if (docname) {
+                        let item = locals["Purchase Items"][docname];
+                        let fieldname = $(this).attr("data-fieldname");
+                        // If model still has value, clear it immediately
+                        if (item && item[fieldname]) {
+                            frappe.model.set_value(item.doctype, item.name, fieldname, "");
+                        }
+                    }
+                }
+            }
+        );
 
         // Filter Vendor ID to only show Customers with customer_type = 'Purchase'
         frm.set_query("vendor_id", function () {
@@ -103,56 +141,23 @@ frappe.ui.form.on("Purchase Items", {
     },
 
     tax_type(frm, cdt, cdn) {
-        // Filter dropdown in other items based on selection
         let item = locals[cdt][cdn];
 
-        if (item.tax_type && item.tax_type !== "Exempted") {
-            // Non-exempted tax selected, set as default and filter dropdowns
+        if (item.tax_type) {
             frm.set_value("default_tax_type", item.tax_type);
-
-            // Set filter for all item tax_type fields to exclude "Exempted"
-            frm.fields_dict.table_qecz.grid.update_docfield_property(
-                "tax_type",
-                "get_query",
-                function () {
-                    return {
-                        filters: {
-                            "name": ["!=", "Exempted"]
-                        }
-                    };
-                }
-            );
-            frm.refresh_field("table_qecz");
-        } else if (item.tax_type === "Exempted") {
-            // Exempted selected, set as default and filter to show ONLY Exempted
-            frm.set_value("default_tax_type", "Exempted");
-
-            // Set filter to show only "Exempted"
-            frm.fields_dict.table_qecz.grid.update_docfield_property(
-                "tax_type",
-                "get_query",
-                function () {
-                    return {
-                        filters: {
-                            "name": "Exempted"
-                        }
-                    };
-                }
-            );
-            frm.refresh_field("table_qecz");
         } else {
-            // Tax cleared/unselected - reset filter to show all options
-            frm.set_value("default_tax_type", "");
-
-            // Remove all filters - show all tax types
-            frm.fields_dict.table_qecz.grid.update_docfield_property(
-                "tax_type",
-                "get_query",
-                function () {
-                    return {};
+            // Check if ANY other row has a tax_type
+            let other_tax = (frm.doc.table_qecz || []).find(d => d.tax_type);
+            if (!other_tax) {
+                frm.set_value("default_tax_type", "");
+            }
+            
+            setTimeout(() => {
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
                 }
-            );
-            frm.refresh_field("table_qecz");
+            }, 10);
         }
+        frm.refresh_field("table_qecz");
     }
 });

@@ -1,4 +1,3 @@
-console.log("🔥 Sales Analytics JS LOADED");
 
 frappe.query_reports["Sales Analytics"] = {
     auto_run: true,
