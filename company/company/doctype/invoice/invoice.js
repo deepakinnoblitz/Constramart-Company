@@ -16,6 +16,27 @@ frappe.ui.form.on("Invoice", {
         toggle_conversion_section(frm);
         set_tax_filters(frm);
 
+        // SMART LIVE REFRESH: Instantly commit empty values when cleared
+        // This ensures the parent updates exactly when the text is cleared, without needing blur
+        frm.fields_dict.table_qecz.grid.wrapper.on("input",
+            'input[data-fieldname="service"], input[data-fieldname="tax_type"]',
+            function () {
+                let val = $(this).val();
+                if (!val) {
+                    let $row = $(this).closest('.grid-row');
+                    let docname = $row.attr('data-name');
+                    if (docname) {
+                        let item = locals["Invoice Items"][docname];
+                        let fieldname = $(this).attr("data-fieldname");
+                        // If model still has value, clear it immediately
+                        if (item && item[fieldname]) {
+                            frappe.model.set_value(item.doctype, item.name, fieldname, "");
+                        }
+                    }
+                }
+            }
+        );
+
         // Make purchase_id read-only for existing invoices
         if (!frm.is_new()) {
             frm.set_df_property("purchase_id", "read_only", 1);
@@ -121,6 +142,13 @@ frappe.ui.form.on("Invoice", {
         setTimeout(() => {
             if (window.calculate_totals_live) {
                 window.calculate_totals_live(frm);
+            }
+
+            // If table is empty, clear default_tax_type
+            if (!frm.doc.table_qecz || frm.doc.table_qecz.length === 0) {
+                frm.set_value("default_tax_type", "");
+                frm.refresh_field("default_tax_type");
+                set_tax_filters(frm);
             }
         }, 200);
     },
@@ -244,13 +272,13 @@ frappe.ui.form.on("Invoice", {
 frappe.ui.form.on("Invoice Items", {
     before_table_qecz_add(frm, cdt, cdn) {
         // Apply default tax when adding new row
-        if (frm.doc.default_tax_type === "Exempted") {
+        if (frm.doc.default_tax_type) {
             // Will be set after row is added
             setTimeout(() => {
                 let items = frm.doc.table_qecz;
                 if (items && items.length > 0) {
                     let last_item = items[items.length - 1];
-                    frappe.model.set_value(last_item.doctype, last_item.name, "tax_type", "Exempted");
+                    frappe.model.set_value(last_item.doctype, last_item.name, "tax_type", frm.doc.default_tax_type);
                 }
             }, 100);
         }
@@ -258,8 +286,17 @@ frappe.ui.form.on("Invoice Items", {
 
     tax_type(frm, cdt, cdn) {
         let item = locals[cdt][cdn];
-        // Set or clear default_tax_type based on row selection
-        frm.set_value("default_tax_type", item.tax_type || "");
+        if (item.tax_type) {
+            // Set default_tax_type based on row selection
+            frm.set_value("default_tax_type", item.tax_type);
+        } else {
+            // If tax_type is cleared, check if ANY other row has a tax_type
+            let other_tax = (frm.doc.table_qecz || []).find(d => d.tax_type);
+            if (!other_tax) {
+                frm.set_value("default_tax_type", "");
+            }
+        }
+        frm.refresh_field("default_tax_type");
         set_tax_filters(frm);
     }
 });
@@ -270,14 +307,15 @@ function set_tax_filters(frm) {
     // Hide "Create New" if Exempted
     frm.fields_dict.table_qecz.grid.update_docfield_property("tax_type", "only_select", is_exempted ? 1 : 0);
 
-    frm.set_query("tax_type", "table_qecz", function () {
-        if (is_exempted) {
+    // Use set_query with dynamic doc evaluation to beat caching
+    frm.set_query("tax_type", "table_qecz", function (doc, cdt, cdn) {
+        if (doc.default_tax_type === "Exempted") {
             return {
                 filters: {
                     "name": "Exempted"
                 }
             };
-        } else if (frm.doc.default_tax_type) {
+        } else if (doc.default_tax_type) {
             return {
                 filters: {
                     "name": ["!=", "Exempted"]
