@@ -159,9 +159,10 @@
   },
   {
    "fieldname": "payment_terms",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Payment Terms",
-   "options": "Select Payment terms\nNext day Payment\nDue On Receipt\n15 days\n30 days\n60 days\n1 Year"
+   "options": "Payment Terms",
+   "placeholder": "Select Payment Terms"
   },
   {
    "fieldname": "po_no",
@@ -297,8 +298,7 @@
    "fieldname": "default_tax_type",
    "fieldtype": "Link",
    "label": "Default Tax Type",
-   "options": "Tax Types",
-   "read_only": 1
+   "options": "Tax Types"
   },
   {
    "fieldname": "company_name",
@@ -342,7 +342,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-10 16:27:01.904461",
+ "modified": "2026-03-11 11:46:45.131387",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice",
