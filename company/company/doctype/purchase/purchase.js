@@ -151,7 +151,7 @@ frappe.ui.form.on("Purchase Items", {
             if (!other_tax) {
                 frm.set_value("default_tax_type", "");
             }
-            
+
             setTimeout(() => {
                 if (document.activeElement && document.activeElement.blur) {
                     document.activeElement.blur();

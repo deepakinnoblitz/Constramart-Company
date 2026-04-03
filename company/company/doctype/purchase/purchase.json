@@ -121,9 +121,10 @@
   },
   {
    "fieldname": "payment_terms",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Payment Terms",
-   "options": "Select Payment terms\nNext day Payment\nDue On Receipt\n15 days\n30 days\n60 days\n1 Year"
+   "options": "Payment Terms",
+   "placeholder": "Select Payment Terms"
   },
   {
    "fieldname": "due_date",
@@ -252,7 +253,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-11 12:06:01.645871",
+ "modified": "2026-03-11 11:46:18.116790",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase",
