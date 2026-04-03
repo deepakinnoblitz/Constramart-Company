@@ -39,6 +39,7 @@ def execute(filters=None):
         {"fieldname": "grand_total", "label": "Invoice Total", "fieldtype": "Currency", "width": 140},
         {"fieldname": "received_amount", "label": "Received", "fieldtype": "Currency", "width": 130},
         {"fieldname": "balance_amount", "label": "Pending", "fieldtype": "Currency", "width": 130},
+        {"fieldname": "business_person_name", "label": "Business Person", "fieldtype": "Link", "options": "Business Person", "width": 150},
     ]
 
     # -------------------------------
@@ -56,8 +57,16 @@ def execute(filters=None):
         values["to_date"] = filters["to_date"]
 
     if filters.get("customer"):
-        conditions.append("inv.customer_id = %(customer)s")
-        values["customer"] = filters["customer"]
+        customer = filters["customer"]
+        if isinstance(customer, list):
+            # Multiple customers selected — use IN clause
+            placeholders = ", ".join([f"%(customer_{i})s" for i in range(len(customer))])
+            conditions.append(f"inv.customer_id IN ({placeholders})")
+            for i, c in enumerate(customer):
+                values[f"customer_{i}"] = c
+        else:
+            conditions.append("inv.customer_id = %(customer)s")
+            values["customer"] = customer
 
     if filters.get("billing_name"):
         conditions.append("inv.billing_name LIKE %(billing_name)s")
@@ -68,6 +77,10 @@ def execute(filters=None):
             conditions.append("inv.default_tax_type = 'Exempted'")
         elif filters["gst_non_gst"] == "GST":
             conditions.append("inv.default_tax_type != 'Exempted'")
+
+    if filters.get("business_person_name"):
+        conditions.append("inv.business_person_name = %(business_person_name)s")
+        values["business_person_name"] = filters["business_person_name"]
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -86,12 +99,14 @@ def execute(filters=None):
             inv.billing_name,
             SUM(child.quantity) AS qty,
             SUM(child.sub_total) / NULLIF(SUM(child.quantity), 0) AS price,
+            bp.business_person_name,
             inv.grand_total,
             inv.received_amount,
             inv.balance_amount
         FROM `tabInvoice` inv
         LEFT JOIN `tabInvoice Items` child ON child.parent = inv.name
         LEFT JOIN `tabCustomer` cust ON cust.name = inv.customer_id
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = inv.business_person_name
         {where_clause}
         GROUP BY inv.name
         ORDER BY inv.invoice_date DESC, inv.name DESC
@@ -136,6 +151,12 @@ def execute(filters=None):
     )[0]
 
     report_summary = [
+        {
+            "label": "Total Invoices",
+            "value": total_count,
+            "indicator": "blue",
+            "datatype": "Int"
+        },
         {
             "label": "Total Sales",
             "value": totals.total_sales or 0,

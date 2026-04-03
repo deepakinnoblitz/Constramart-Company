@@ -1,4 +1,3 @@
-console.log("🔥 Sales Analytics JS LOADED");
 
 frappe.query_reports["Sales Analytics"] = {
     auto_run: true,
@@ -24,8 +23,10 @@ frappe.query_reports["Sales Analytics"] = {
         {
             fieldname: "customer",
             label: __("Customer"),
-            fieldtype: "Link",
-            options: "Customer"
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.db.get_link_options("Customer", txt);
+            }
         },
         {
             fieldname: "billing_name",
@@ -37,6 +38,12 @@ frappe.query_reports["Sales Analytics"] = {
             label: __("GST / Non-GST"),
             fieldtype: "Select",
             options: "\nGST\nNon-GST"
+        },
+        {
+            fieldname: "business_person_name",
+            label: __("Business Person"),
+            fieldtype: "Link",
+            options: "Business Person"
         }
     ],
 
@@ -126,10 +133,23 @@ frappe.query_reports["Sales Analytics"] = {
 
             // Safety: if user goes beyond last page
             if (rows.length === 0 && page > 1) {
-                report.set_filter_value("page", page - 1);
+                report.set_filter_value("page", 1);
                 report.refresh();
             }
 
         }, 0);
-    }
+    },
+
+    filters_config: [
+        {
+            "setup": function (report) {
+                report.page.fields_dict.from_date.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.to_date.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.customer.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.billing_name.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.gst_non_gst.$input.on("change", () => report.set_filter_value("page", 1));
+                report.page.fields_dict.business_person_name.$input.on("change", () => report.set_filter_value("page", 1));
+            }
+        }
+    ]
 };
