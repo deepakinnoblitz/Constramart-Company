@@ -41,11 +41,11 @@ frappe.query_reports["Purchase Report"] = {
                 };
             }
         },
-        {
-            fieldname: "vendor_name",
-            label: __("Vendor Name"),
-            fieldtype: "Data"
-        },
+        // {
+        //     fieldname: "vendor_name",
+        //     label: __("Vendor Name"),
+        //     fieldtype: "Data"
+        // },
         {
             fieldname: "gst_non_gst",
             label: __("GST / Non-GST"),
@@ -57,6 +57,12 @@ frappe.query_reports["Purchase Report"] = {
             label: __("Purchase Status"),
             fieldtype: "Select",
             options: "\nPending\nPartially Paid\nFully Paid"
+        },
+        {
+            fieldname: "business_person_name",
+            label: __("Business Person"),
+            fieldtype: "Link",
+            options: "Business Person"
         }
     ],
 

@@ -15,6 +15,7 @@ frappe.ui.form.on("Invoice", {
     refresh(frm) {
         toggle_conversion_section(frm);
         set_tax_filters(frm);
+        setup_location_trigger(frm);
 
         // SMART LIVE REFRESH: Instantly commit empty values when cleared
         // This ensures the parent updates exactly when the text is cleared, without needing blur
@@ -336,4 +337,112 @@ function toggle_conversion_section(frm) {
         frm.set_df_property("converted_from_estimation", "hidden", 1);
         frm.set_df_property("converted_estimation_id", "hidden", 1);
     }
+}
+
+function setup_location_trigger(frm) {
+    // Add a placeholder to the location field
+    frm.set_df_property("location", "placeholder", __("Click to select or create location"));
+
+    // Ensure only ONE listener is attached (off() removes any previous listeners)
+    $(frm.fields_dict.location.input).off("click").on("click", function () {
+        show_location_dialog(frm);
+    });
+}
+
+function show_location_dialog(frm) {
+    if (!frm.doc.customer_id) {
+        frappe.msgprint(__("Please select a Customer first."));
+        return;
+    }
+
+    // Fetch existing locations from Customer
+    frappe.db.get_doc("Customer", frm.doc.customer_id).then(customer => {
+        let locations = (customer.location || []).map(row => row.location_name);
+        let location_options = locations.length > 0 ? ["", ...locations] : ["No Location Available"];
+
+        let d = new frappe.ui.Dialog({
+            title: __("Select or Create Location"),
+            fields: [
+                {
+                    label: __("Select Existing Location"),
+                    fieldname: "existing_location",
+                    fieldtype: "Select",
+                    options: location_options
+                },
+                {
+                    label: __("Location Name"),
+                    fieldname: "location_name",
+                    fieldtype: "Data",
+                    reqd: 1
+                },
+                {
+                    label: __("Address"),
+                    fieldname: "address",
+                    fieldtype: "Small Text"
+                }
+            ],
+            primary_action_label: __("Apply to Invoice"),
+            primary_action(values) {
+                // Update Invoice fields (deferred save to Customer until Invoice save)
+                frm.set_value("location", values.location_name);
+                frm.set_value("location_address", values.address);
+                frm.set_value("is_new_location", 1);
+
+                d.hide();
+            }
+        });
+
+        // 📝 PRE-FILL DATA FROM FORM
+        if (frm.doc.location) {
+            if (locations.includes(frm.doc.location)) {
+                d.set_value("existing_location", frm.doc.location);
+                d.set_value("location_name", frm.doc.location);
+                
+                // Trigger logic to set address and hide fields
+                let row = customer.location.find(r => r.location_name === frm.doc.location);
+                if (row) d.set_value("address", row.address || "");
+                
+                d.get_field("location_name").df.reqd = 0;
+                d.get_field("location_name").df.hidden = 1;
+                d.get_field("address").df.hidden = 1;
+                setTimeout(() => {
+                    if (d.fields_dict.location_name) d.fields_dict.location_name.$wrapper.hide();
+                    if (d.fields_dict.address) d.fields_dict.address.$wrapper.hide();
+                }, 100);
+            } else {
+                d.set_value("location_name", frm.doc.location);
+                d.set_value("address", frm.doc.location_address || "");
+            }
+        }
+
+        // 🚀 Robust Event Listener for visibility toggle
+        d.fields_dict.existing_location.$input.on("change", function () {
+            let selected = d.get_value("existing_location");
+            if (selected && selected !== "No Location Available") {
+                d.set_value("location_name", selected);
+                // Find address
+                let row = (customer.location || []).find(r => r.location_name === selected);
+                if (row) {
+                    d.set_value("address", row.address || "");
+                }
+                // Force Hide and make NOT required (since it's filled automatically)
+                d.get_field("location_name").df.reqd = 0;
+                d.get_field("location_name").df.hidden = 1;
+                d.get_field("address").df.hidden = 1;
+                d.fields_dict.location_name.$wrapper.hide();
+                d.fields_dict.address.$wrapper.hide();
+            } else {
+                // Force Show and make required for new entry
+                d.set_value("location_name", "");
+                d.set_value("address", "");
+                d.get_field("location_name").df.reqd = 1;
+                d.get_field("location_name").df.hidden = 0;
+                d.get_field("address").df.hidden = 0;
+                d.fields_dict.location_name.$wrapper.show();
+                d.fields_dict.address.$wrapper.show();
+            }
+        });
+
+        d.show();
+    });
 }

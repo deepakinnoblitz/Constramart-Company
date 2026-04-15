@@ -12,8 +12,27 @@ class Purchase(Document):
         if not self.is_new():
             self.check_purchase_collections()
         
+        self.validate_invoice_link()
         self.calculate_child_rows()
         self.calculate_totals()
+
+    def validate_invoice_link(self):
+        if self.invoice_id:
+            # Check if this invoice is already linked to another Purchase
+            existing_purchase = frappe.db.get_value("Invoice", self.invoice_id, "reference_purchase")
+            if existing_purchase and existing_purchase != self.name:
+                # Fetch Names for better display
+                invoice_name = frappe.db.get_value("Invoice", self.invoice_id, "customer_name")
+                purchase_vendor = frappe.db.get_value("Purchase", existing_purchase, "vendor_name")
+                
+                frappe.throw(
+                    frappe._("Invoice {0} ({1}) is already linked to Purchase {2} ({3}). Please select a different Invoice.").format(
+                        frappe.bold(self.invoice_id),
+                        frappe.bold(invoice_name or "Unknown"),
+                        frappe.bold(existing_purchase),
+                        frappe.bold(purchase_vendor or "Unknown")
+                    )
+                )
     
     def check_purchase_collections(self):
         """Prevent editing or deleting if Purchase Collection entries exist"""
@@ -29,6 +48,26 @@ class Purchase(Document):
 
     def on_trash(self):
         self.check_purchase_collections()
+        # Clear Invoice reference when Purchase is deleted
+        if self.invoice_id:
+            frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", None)
+
+    def on_update(self):
+        """Update Invoice reference when invoice_id changes"""
+        if self.has_value_changed("invoice_id"):
+            # Clear old invoice reference
+            old_invoice_id = self.get_doc_before_save().invoice_id if self.get_doc_before_save() else None
+            if old_invoice_id:
+                frappe.db.set_value("Invoice", old_invoice_id, "reference_purchase", None)
+            
+            # Set new invoice reference
+            if self.invoice_id:
+                frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", self.name)
+    
+    def after_insert(self):
+        # Update Invoice with Purchase reference
+        if self.invoice_id:
+            frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", self.name)
     
     def calculate_child_rows(self):
         for item in self.table_qecz:
