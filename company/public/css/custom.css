@@ -2442,19 +2442,34 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   margin-top: -15px !important;
 }
 
-.dt-cell--col-0{
+.dt-cell--col-0 {
   display: none !important;
 }
 
-.modal-body, .frappe-control[data-fieldtype=Phone], .selected-phone {
-    top: 0 !important;
+.modal-body,
+.frappe-control[data-fieldtype=Phone],
+.selected-phone {
+  top: 0 !important;
 }
 
-.workspace-title{
-   color: #ffffff !important;
-}
-
-#icon-home{
+.workspace-title {
   color: #ffffff !important;
-  stroke: #ffffff !important; 
+}
+
+#icon-home {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* =======================================================
+   REPORT FILTER BAR — MultiSelectList consistent styling
+   Match the look of Date / Data / Select / Link inputs
+   ======================================================= */
+
+/* Outer wrapper — remove the weird border Frappe adds inline */
+.page-form .multiselect-list.dropdown {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
