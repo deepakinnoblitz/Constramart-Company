@@ -47,7 +47,7 @@ app_include_js = [
     # "/assets/company/js/sales_pipeline.js",
 ]
 
-app_include_css = "/assets/company/css/custom.css?v=11"
+app_include_css = "/assets/company/css/custom.css?v=12"
 
 
 doc_events = {
