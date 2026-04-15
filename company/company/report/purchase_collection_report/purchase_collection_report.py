@@ -226,7 +226,7 @@ def get_summary(data):
         {
             "label": "Total Collections",
             "value": len(data),
-            "indicator": "Blue",
+            "indicator": "green",
             "datatype": "Int",
         },
         {

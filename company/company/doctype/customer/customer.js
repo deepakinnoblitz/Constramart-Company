@@ -8,6 +8,20 @@
 // });
 frappe.ui.form.on("Customer", {
     refresh(frm) {
+        // if (!frm.is_new()) {
+        //     frm.page.add_inner_button(__("Refresh Old Status"), () => {
+        //         frappe.call({
+        //             method: "company.company.doctype.invoice.invoice.refresh_customer_status",
+        //             args: { customer: frm.doc.name },
+        //             callback: function(r) {
+        //                 if(r.message) {
+        //                     frappe.show_alert({message: __("Status Refreshed Successfully!"), indicator: "green"});
+        //                     frm.reload_doc();
+        //                 }
+        //             }
+        //         });
+        //     });
+        // }
 
         frm.trigger("lock_based_on_links");
 

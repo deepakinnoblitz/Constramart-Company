@@ -41,11 +41,11 @@ frappe.query_reports["Purchase Report"] = {
                 };
             }
         },
-        {
-            fieldname: "vendor_name",
-            label: __("Vendor Name"),
-            fieldtype: "Data"
-        },
+        // {
+        //     fieldname: "vendor_name",
+        //     label: __("Vendor Name"),
+        //     fieldtype: "Data"
+        // },
         {
             fieldname: "gst_non_gst",
             label: __("GST / Non-GST"),

@@ -103,7 +103,6 @@ frappe.ui.form.on("Purchase", {
             }
         }, 200);
     },
-    // Tax auto-fill logic
     default_tax_type(frm) {
         if (!frm.doc.default_tax_type) return;
 
@@ -115,6 +114,81 @@ frappe.ui.form.on("Purchase", {
                     frappe.model.set_value(item.doctype, item.name, "tax_type", "Exempted");
                 });
                 frm.refresh_field("table_qecz");
+            }
+        });
+    },
+
+    invoice_id(frm) {
+        if (!frm.doc.invoice_id) return;
+
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Invoice",
+                name: frm.doc.invoice_id
+            },
+            callback: function (r) {
+                if (r.message) {
+                    let invoice = r.message;
+
+                    // Set tax type
+                    frm.set_value("default_tax_type", invoice.default_tax_type);
+
+                    // Clear existing items
+                    frm.clear_table("table_qecz");
+
+                    // Fetch invoice items
+                    if (invoice.table_qecz && invoice.table_qecz.length > 0) {
+                        invoice.table_qecz.forEach(function (item) {
+                            let purchase_item = frm.add_child("table_qecz");
+                            purchase_item.service = item.service;
+                            purchase_item.hsn_code = item.hsn_code;
+                            purchase_item.description = item.description;
+                            purchase_item.brand = item.brand;
+                            purchase_item.quantity = item.quantity;
+                            purchase_item.price = item.price;
+                            purchase_item.discount_type = item.discount_type;
+                            purchase_item.discount = item.discount;
+                            purchase_item.tax_type = item.tax_type;
+                            purchase_item.tax_percent = item.tax_percent;
+
+                            // Fetch tax type details to get tax_type_master for proper calculation
+                            if (item.tax_type) {
+                                frappe.db.get_value("Tax Types", item.tax_type, ["tax_percentage", "tax_type"])
+                                    .then(tax_r => {
+                                        if (tax_r.message) {
+                                            purchase_item.tax_percentage = Number(tax_r.message.tax_percentage || 0);
+                                            purchase_item.tax_type_master = tax_r.message.tax_type;
+                                        }
+                                    });
+                            }
+                        });
+
+                        frm.refresh_field("table_qecz");
+
+                        // Trigger calculations after a short delay to ensure tax data is fetched
+                        setTimeout(() => {
+                            // Calculate each row
+                            (frm.doc.table_qecz || []).forEach(row => {
+                                if (window.calculate_row_amount_dynamic) {
+                                    window.calculate_row_amount_dynamic(row);
+                                }
+                            });
+
+                            // Calculate totals
+                            if (window.purchase_calculate_totals_live) {
+                                window.purchase_calculate_totals_live(frm);
+                            }
+
+                            frm.refresh_field("table_qecz");
+                        }, 500);
+                    }
+
+                    frappe.show_alert({
+                        message: __("Invoice details fetched successfully"),
+                        indicator: "green"
+                    }, 3);
+                }
             }
         });
     }

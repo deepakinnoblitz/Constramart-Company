@@ -7,10 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_kiex",
-  "reference_invoice",
   "business_person_name",
-  "column_break_jhof",
+  "reference_invoice",
   "customer_name",
+  "column_break_jhof",
+  "invoice_id",
+  "customer_name_invoice",
   "purchase_details_section",
   "vendor_id",
   "vendor_name",
@@ -213,10 +215,8 @@
   {
    "fieldname": "default_tax_type",
    "fieldtype": "Link",
-   "hidden": 0,
    "label": "Default Tax Type",
-   "options": "Tax Types",
-   "read_only": 0
+   "options": "Tax Types"
   },
   {
    "fieldname": "section_break_kiex",
@@ -227,6 +227,19 @@
    "fieldtype": "Link",
    "label": "Reference Invoice",
    "options": "Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_id",
+   "fieldtype": "Link",
+   "label": "Invoice ID",
+   "options": "Invoice"
+  },
+  {
+   "fetch_from": "invoice_id.customer_name",
+   "fieldname": "customer_name_invoice",
+   "fieldtype": "Data",
+   "label": "Customer Name",
    "read_only": 1
   },
   {
@@ -253,7 +266,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-11 11:46:18.116790",
+ "modified": "2026-04-03 12:20:23.718258",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase",

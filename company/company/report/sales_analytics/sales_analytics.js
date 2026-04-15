@@ -21,18 +21,24 @@ frappe.query_reports["Sales Analytics"] = {
             default: frappe.datetime.get_today()
         },
         {
+            fieldname: "invoice",
+            label: __("Invoice"),
+            fieldtype: "Link",
+            options: "Invoice"
+        },
+        {
             fieldname: "customer",
             label: __("Customer"),
             fieldtype: "MultiSelectList",
-            get_data: function(txt) {
+            get_data: function (txt) {
                 return frappe.db.get_link_options("Customer", txt);
             }
         },
-        {
-            fieldname: "billing_name",
-            label: __("Company Name"),
-            fieldtype: "Data"
-        },
+        // {
+        //     fieldname: "billing_name",
+        //     label: __("Company Name"),
+        //     fieldtype: "Data"
+        // },
         {
             fieldname: "gst_non_gst",
             label: __("GST / Non-GST"),
@@ -44,18 +50,19 @@ frappe.query_reports["Sales Analytics"] = {
             label: __("Business Person"),
             fieldtype: "Link",
             options: "Business Person"
-        }
+        },
+        {
+            fieldname: "location",
+            label: __("Location"),
+            fieldtype: "Select",
+            options: [""]
+        },
     ],
 
-    // ----------------------------
-    // SETUP (RUNS ONCE)
-    // ----------------------------
     onload(report) {
-        console.log("✅ onload fired");
-
+        console.log("🛠️ Sales Analytics onload fired");
         report.set_filter_value("page_length", 10);
 
-        // Store button references
         report._prev_btn = report.page.add_inner_button("⬅ Prev", () => {
             const page = report.get_filter_value("page");
             if (page > 1) {
@@ -70,42 +77,61 @@ frappe.query_reports["Sales Analytics"] = {
             report.refresh();
         });
 
-        // Ensure "All" data is exported even when view is paginated and filters are hidden
-        report.export_report = () => {
-            const dialog = frappe.report_utils.get_export_dialog(
-                __(report.report_name),
-                [],
-                ({ file_format }) => {
-                    const filters = report.get_filter_values(true);
-                    // Force full data for export
-                    filters.page_length = 999999;
-                    filters.page = 1;
-                    filters.is_export = 1;
-
-                    const args = {
-                        cmd: "frappe.desk.query_report.export_query",
-                        report_name: report.report_name,
-                        file_format_type: file_format,
-                        filters: filters,
-                        visible_idx: [], // Clear this to ensure server sends everything
-                        is_export: 1,    // Signal to backend
-                        include_indentation: 0,
-                        include_filters: 0,
-                        export_in_background: 0
-                    };
-
-                    open_url_post(frappe.request.url, args);
-                }
-            );
-            dialog.show();
-        };
+        // Validation hint
+        report.page.fields_dict.location.$input.on("focus", () => {
+            const customer = report.get_filter_value("customer");
+            if (!customer || (Array.isArray(customer) && customer.length === 0)) {
+                frappe.msgprint(__("Please Select the Customer"));
+            }
+        });
     },
 
-    // ----------------------------
-    // DATA LOGIC
-    // ----------------------------
     after_refresh(report) {
         console.log("🔥 after_refresh fired");
+
+        // 🚀 SYNC LOCATIONS IN after_refresh (FOOLPROOF METHOD)
+        const value = report.get_filter_value("customer");
+        let customers = Array.isArray(value) ? value : (value ? [value] : []);
+
+        // Compare with last fetched to avoid infinite loops
+        const current_customers_json = JSON.stringify(customers.sort());
+        if (report._last_customers_json !== current_customers_json) {
+            console.log("🔄 Customer selection changed, syncing locations...");
+            report._last_customers_json = current_customers_json;
+
+            if (customers.length > 0 && customers[0] !== "") {
+                frappe.call({
+                    method: "company.company.doctype.invoice.invoice.get_customer_locations",
+                    args: {
+                        customer: customers
+                    },
+                    callback: function (r) {
+                        console.log("📍 Locations sync result:", r.message);
+                        let options = [""];
+                        if (r.message && r.message.length > 0) {
+                            options = options.concat(r.message.map(row => row.location_name));
+                            frappe.show_alert({ message: __("Available locations updated"), indicator: 'green' });
+                        } else {
+                            options = ["No Location Found"];
+                        }
+
+                        if (report.set_filter_property) {
+                            report.set_filter_property("location", "options", options);
+                        } else {
+                            report.page.fields_dict.location.df.options = options;
+                            report.page.fields_dict.location.refresh();
+                        }
+                    }
+                });
+            } else {
+                if (report.set_filter_property) {
+                    report.set_filter_property("location", "options", [""]);
+                } else {
+                    report.page.fields_dict.location.df.options = [""];
+                    report.page.fields_dict.location.refresh();
+                }
+            }
+        }
 
         const page = report.get_filter_value("page");
         const page_length = report.get_filter_value("page_length");
@@ -113,42 +139,33 @@ frappe.query_reports["Sales Analytics"] = {
         setTimeout(() => {
             const datatable = report.datatable;
             if (!datatable || !datatable.datamanager) return;
-
             const rows = datatable.datamanager.getRows();
-            console.log("Rows:", rows.length, "Page:", page);
-
-            // Disable Prev on first page
-            if (report._prev_btn) {
-                report._prev_btn.prop("disabled", page <= 1);
-            }
-
-            // Last page detection
-            const is_last_page = rows.length < page_length;
-
-            // Disable / enable Next
-            if (report._next_btn) {
-                report._next_btn.prop("disabled", is_last_page);
-            }
-
-
-            // Safety: if user goes beyond last page
-            if (rows.length === 0 && page > 1) {
-                report.set_filter_value("page", 1);
-                report.refresh();
-            }
-
+            if (report._prev_btn) report._prev_btn.prop("disabled", page <= 1);
+            if (report._next_btn) report._next_btn.prop("disabled", rows.length < page_length);
         }, 0);
+    },
+
+    "customer": function (report) {
+        report.set_filter_value("page", 1);
+    },
+
+    "location": function (report) {
+        report.set_filter_value("page", 1);
+    },
+
+    "invoice": function (report) {
+        report.set_filter_value("page", 1);
     },
 
     filters_config: [
         {
             "setup": function (report) {
-                report.page.fields_dict.from_date.$input.on("change", () => report.set_filter_value("page", 1));
-                report.page.fields_dict.to_date.$input.on("change", () => report.set_filter_value("page", 1));
-                report.page.fields_dict.customer.$input.on("change", () => report.set_filter_value("page", 1));
-                report.page.fields_dict.billing_name.$input.on("change", () => report.set_filter_value("page", 1));
-                report.page.fields_dict.gst_non_gst.$input.on("change", () => report.set_filter_value("page", 1));
-                report.page.fields_dict.business_person_name.$input.on("change", () => report.set_filter_value("page", 1));
+                const fields = ["from_date", "to_date", "invoice", "billing_name", "gst_non_gst", "business_person_name", "location"];
+                fields.forEach(f => {
+                    if (report.page.fields_dict[f]) {
+                        report.page.fields_dict[f].$input.on("change", () => report.set_filter_value("page", 1));
+                    }
+                });
             }
         }
     ]

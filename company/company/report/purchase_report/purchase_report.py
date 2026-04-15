@@ -46,13 +46,13 @@ def execute(filters=None):
             "fieldtype": "Date",
             "width": 120,
         },
-        {
-            "fieldname": "vendor_id",
-            "label": "Vendor ID",
-            "fieldtype": "Link",
-            "options": "Customer",
-            "width": 140,
-        },
+        # {
+        #     "fieldname": "vendor_id",
+        #     "label": "Vendor ID",
+        #     "fieldtype": "Link",
+        #     "options": "Customer",
+        #     "width": 140,
+        # },
         {
             "fieldname": "vendor_name",
             "label": "Vendor Name",
@@ -66,6 +66,8 @@ def execute(filters=None):
             "width": 140,
         },
         {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "width": 80},
+        {"fieldname": "amount_exclusive", "label": "Total Excl. Tax", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "total_tax_amount", "label": "Total Tax", "fieldtype": "Currency", "width": 120},
         {
             "fieldname": "grand_total",
             "label": "Purchase Total",
@@ -153,7 +155,8 @@ def execute(filters=None):
             p.vendor_name,
             p.bill_no,
             SUM(i.quantity)     AS qty,
-            SUM(i.sub_total) / NULLIF(SUM(i.quantity), 0) AS price,
+            SUM(i.tax_amount)   AS total_tax_amount,
+            SUM(i.sub_total - i.tax_amount) AS amount_exclusive,
             p.grand_total,
             bp.business_person_name AS business_person_name,
             p.paid_amount,
@@ -198,8 +201,15 @@ def execute(filters=None):
         SELECT
             SUM(p.grand_total) AS total_purchase,
             SUM(p.paid_amount) AS total_paid,
-            SUM(p.balance_amount) AS total_pending
+            SUM(p.balance_amount) AS total_pending,
+            SUM(tax_sub.total_tax) AS total_tax,
+            SUM(tax_sub.total_excl) AS total_excl
         FROM `tabPurchase` p
+        LEFT JOIN (
+            SELECT parent, SUM(tax_amount) as total_tax, SUM(sub_total - tax_amount) as total_excl
+            FROM `tabPurchase Items`
+            GROUP BY parent
+        ) tax_sub ON tax_sub.parent = p.name
         {where_clause}
         """,
         values,
@@ -207,6 +217,8 @@ def execute(filters=None):
     )[0]
 
     total_purchase = totals.total_purchase or 0
+    total_tax = totals.total_tax or 0
+    total_excl = totals.total_excl or 0
     total_paid = totals.total_paid or 0
     total_pending = totals.total_pending or 0
 
@@ -217,11 +229,23 @@ def execute(filters=None):
         {
             "label": "Total Purchases",
             "value": total_count,
-            "indicator": "blue",
+            "indicator": "green",
             "datatype": "Int",
         },
         {
-            "label": "Total Purchase Amount",
+            "label": "Total Purchase (Excl. Tax)",
+            "value": total_excl,
+            "indicator": "blue",
+            "datatype": "Currency",
+        },
+        {
+            "label": "Total Purchase Tax",
+            "value": total_tax,
+            "indicator": "blue",
+            "datatype": "Currency",
+        },
+        {
+            "label": "Total Purchase Cost",
             "value": total_purchase,
             "indicator": "blue",
             "datatype": "Currency",
@@ -229,7 +253,7 @@ def execute(filters=None):
         {
             "label": f"Paid Amount ({paid_percent:.1f}%)",
             "value": total_paid,
-            "indicator": "green" if paid_percent >= 50 else "orange",
+            "indicator": "green",
             "datatype": "Currency",
         },
         {
