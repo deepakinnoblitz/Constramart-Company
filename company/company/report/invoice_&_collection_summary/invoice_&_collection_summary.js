@@ -23,8 +23,10 @@ frappe.query_reports["Invoice & Collection Summary"] = {
         {
             fieldname: "customer",
             label: __("Customer"),
-            fieldtype: "Link",
-            options: "Customer"
+            fieldtype: "MultiSelectList",
+            get_data: function (txt) {
+                return frappe.db.get_link_options("Customer", txt);
+            }
         },
         {
             fieldname: "invoice",
@@ -47,8 +49,10 @@ frappe.query_reports["Invoice & Collection Summary"] = {
         {
             fieldname: "location",
             label: __("Location"),
-            fieldtype: "Select",
-            options: [""]
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.utils.filter_dict(frappe.query_report._location_options || [], { label: ["like", "%" + txt + "%"] });
+            }
         }
     ],
 
@@ -108,42 +112,35 @@ frappe.query_reports["Invoice & Collection Summary"] = {
         console.log("🔥 after_refresh fired");
 
         // 🚀 SYNC LOCATIONS IN after_refresh (FOOLPROOF METHOD)
-        const customer = report.get_filter_value("customer");
-        if (report._last_customer !== customer) {
-            console.log("🔄 Customer changed, syncing locations...");
-            report._last_customer = customer;
+        const value = report.get_filter_value("customer");
+        let customers = Array.isArray(value) ? value : (value ? [value] : []);
 
-            if (customer) {
+        const current_customers_json = JSON.stringify(customers.sort());
+        if (report._last_customers_json !== current_customers_json) {
+            console.log("🔄 Customer selections changed, syncing locations...");
+            report._last_customers_json = current_customers_json;
+
+            if (customers.length > 0 && customers[0] !== "") {
                 frappe.call({
                     method: "company.company.doctype.invoice.invoice.get_customer_locations",
                     args: {
-                        customer: customer
+                        customer: customers
                     },
                     callback: function (r) {
                         console.log("📍 Locations sync result:", r.message);
-                        let options = [""];
+                        let options = [];
                         if (r.message && r.message.length > 0) {
-                            options = options.concat(r.message.map(row => row.location_name));
+                            options = r.message.map(row => ({ value: row.location_name, label: row.location_name, description: "" }));
                             frappe.show_alert({ message: __("Available locations updated"), indicator: 'green' });
                         } else {
-                            options = ["No Location Found"];
+                            options = [{ value: "none", label: "No Location Found", description: "" }];
                         }
 
-                        if (report.set_filter_property) {
-                            report.set_filter_property("location", "options", options);
-                        } else {
-                            report.page.fields_dict.location.df.options = options;
-                            report.page.fields_dict.location.refresh();
-                        }
+                        report._location_options = options;
                     }
                 });
             } else {
-                if (report.set_filter_property) {
-                    report.set_filter_property("location", "options", [""]);
-                } else {
-                    report.page.fields_dict.location.df.options = [""];
-                    report.page.fields_dict.location.refresh();
-                }
+                report._location_options = [];
             }
         }
 

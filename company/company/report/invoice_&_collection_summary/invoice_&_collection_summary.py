@@ -100,7 +100,12 @@ def get_data(filters, is_export=False):
         conditions += f" AND inv.invoice_date <= '{filters['to_date']}'"
 
     if filters.get("customer"):
-        conditions += f" AND inv.customer_id = '{filters['customer']}'"
+        customer = filters["customer"]
+        if isinstance(customer, list):
+            placeholders = ", ".join([f"'{c}'" for c in customer])
+            conditions += f" AND inv.customer_id IN ({placeholders})"
+        else:
+            conditions += f" AND inv.customer_id = '{customer}'"
 
     if filters.get("invoice"):
         conditions += f" AND inv.name = '{filters['invoice']}'"
@@ -109,7 +114,12 @@ def get_data(filters, is_export=False):
         conditions += f" AND ic.business_person = '{filters['business_person']}'"
 
     if filters.get("location"):
-        conditions += f" AND inv.location = '{filters['location']}'"
+        location = filters["location"]
+        if isinstance(location, list):
+            placeholders = ", ".join([f"'{l}'" for l in location])
+            conditions += f" AND inv.location IN ({placeholders})"
+        else:
+            conditions += f" AND inv.location = '{location}'"
 
     # Fetch all collections for relevant invoices to calculate running balance accurately
     # Sort ASC for sequence calculation
@@ -131,7 +141,7 @@ def get_data(filters, is_export=False):
         INNER JOIN `tabInvoice Collection` ic ON ic.invoice = inv.name
         LEFT JOIN `tabBusiness Person` bp ON bp.name = ic.business_person
         WHERE {conditions}
-        ORDER BY inv.invoice_date ASC, ic.collection_date ASC, ic.creation ASC
+        ORDER BY inv.invoice_date ASC, inv.name ASC, ic.creation ASC
     """, as_dict=True)
 
     # ---------------------------------------------------
@@ -201,7 +211,7 @@ def get_data(filters, is_export=False):
 
     # Final sort for display (Latest First)
     processed_data.sort(
-        key=lambda x: (x.invoice_date, x.collection_date, x.creation),
+        key=lambda x: (x.invoice_date, x.invoice, x.creation),
         reverse=True
     )
 

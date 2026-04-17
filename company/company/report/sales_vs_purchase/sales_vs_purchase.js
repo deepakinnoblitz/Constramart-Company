@@ -43,6 +43,7 @@ frappe.query_reports["Sales vs purchase"] = {
             fieldname: "customer",
             label: __("Customer"),
             fieldtype: "MultiSelectList",
+            reqd: 1,
             get_data: function (txt) {
                 return frappe.db.get_link_options("Customer", txt, {
                     customer_type: "Sales"
@@ -62,8 +63,10 @@ frappe.query_reports["Sales vs purchase"] = {
         {
             fieldname: "location",
             label: __("Location"),
-            fieldtype: "Select",
-            options: [""]
+            fieldtype: "MultiSelectList",
+            get_data: function (txt) {
+                return frappe.utils.filter_dict(frappe.query_report._location_options || [], { label: ["like", "%" + txt + "%"] });
+            }
         },
         {
             fieldname: "only_linked",
@@ -105,7 +108,7 @@ frappe.query_reports["Sales vs purchase"] = {
         report.page.fields_dict.location.$input.on("focus", () => {
             const customer = report.get_filter_value("customer");
             if (!customer || (Array.isArray(customer) && customer.length === 0)) {
-                frappe.msgprint(__("Please Select the Customer"));
+                frappe.msgprint(__("Please Select the Customer First"));
             }
         });
 
@@ -181,26 +184,25 @@ frappe.query_reports["Sales vs purchase"] = {
                         customer: customers
                     },
                     callback: function (r) {
-                        let options = [""];
+                        let options = [];
                         if (r.message && r.message.length > 0) {
-                            options = options.concat(r.message.map(row => row.location_name));
+                            options = r.message.map(row => ({ value: row.location_name, label: row.location_name, description: "" }));
+                            frappe.show_alert({ message: __("Available locations updated"), indicator: 'green' });
                         } else {
-                            options = ["No Location Found"];
+                            options = [{ value: "none", label: "No Location Found" }];
                         }
 
-                        if (report.set_filter_property) {
-                            report.set_filter_property("location", "options", options);
-                        } else {
-                            report.page.fields_dict.location.df.options = options;
+                        report._location_options = options;
+                        
+                        // Force refresh the field to pick up new _location_options if user is already searching
+                        if (report.page.fields_dict.location.refresh) {
                             report.page.fields_dict.location.refresh();
                         }
                     }
                 });
             } else {
-                if (report.set_filter_property) {
-                    report.set_filter_property("location", "options", [""]);
-                } else {
-                    report.page.fields_dict.location.df.options = [""];
+                report._location_options = [];
+                if (report.page.fields_dict.location.refresh) {
                     report.page.fields_dict.location.refresh();
                 }
             }

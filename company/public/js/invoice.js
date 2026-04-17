@@ -88,10 +88,20 @@ frappe.ui.form.on("Invoice Items", {
             });
     },
 
+    tax_type: trigger_child_update,
+    tax_percent: trigger_child_update,
+    tax_percentage: trigger_child_update,
     quantity: trigger_child_update,
     price: trigger_child_update,
     discount: trigger_child_update,
-    discount_type: trigger_child_update,
+    discount_type(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        // Explicitly clear discount if type is not Flat or Percentage
+        if (row.discount_type !== "Flat" && row.discount_type !== "Percentage") {
+            frappe.model.set_value(cdt, cdn, "discount", 0);
+        }
+        trigger_child_update(frm, cdt, cdn);
+    },
 
     tax_type(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
@@ -142,12 +152,13 @@ window.calculate_row_amount_dynamic = function calculate_row_amount_dynamic(row)
 
     let taxable = base - disc;
 
-    // Tax
-    let tax_amount = taxable * (Number(row.tax_percentage || 0) / 100);
+    // Tax (respect 0 as a valid rate for Exempted)
+    let tax_rate = (row.tax_percentage !== undefined && row.tax_percentage !== null) ? flt(row.tax_percentage) : flt(row.tax_percent || 0);
+    let tax_amount = taxable * (tax_rate / 100);
     row.tax_amount = tax_amount;
 
-    // TAX SPLIT USING MASTER FIELD `tax_type`
-    let tax_type = (row.tax_type_master || "").toUpperCase().trim();
+    // TAX SPLIT USING MASTER FIELD `tax_type` (Check both memory and doctype fields)
+    let tax_type = (row.tax_type_master || row.tax_category || "").toUpperCase().trim();
 
     if (tax_type === "GST") {
         row.cgst = tax_amount / 2;
