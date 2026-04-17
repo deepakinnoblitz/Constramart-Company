@@ -38,11 +38,17 @@ frappe.ui.form.on("Invoice", {
             }
         );
 
-        // Make purchase_id read-only for existing invoices
         if (!frm.is_new()) {
             frm.set_df_property("purchase_id", "read_only", 1);
         } else {
             frm.set_df_property("purchase_id", "read_only", 0);
+            
+            // Filter Purchase ID to only show unlinked Purchases
+            frm.set_query("purchase_id", function () {
+                return {
+                    query: "company.company.api.get_unlinked_purchases"
+                };
+            });
         }
 
         // Lock form if collections exist
@@ -175,14 +181,32 @@ frappe.ui.form.on("Invoice", {
             return;
         }
 
-        // Get the selected tax type name
-        if (frm.doc.default_tax_type === "Exempted") {
-            // Auto-fill all items with "Exempted"
-            frm.doc.table_qecz.forEach((item) => {
-                frappe.model.set_value(item.doctype, item.name, "tax_type", "Exempted");
-            });
-            frm.refresh_field("table_qecz");
-        }
+        // Get the selected tax type details (percentage is needed for instant recalculation)
+        frappe.db.get_value("Tax Types", frm.doc.default_tax_type, ["name", "tax_percentage", "tax_type"], (r) => {
+            if (r) {
+                const tax_percent = flt(r.tax_percentage || 0);
+                const tax_type_master = r.tax_type;
+
+                // Auto-fill all items and RECALCULATE immediately
+                (frm.doc.table_qecz || []).forEach((item) => {
+                    frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
+                    
+                    // Unified field update (DocType field is 'tax_percent', Script expects 'tax_percentage')
+                    frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
+                    item.tax_percentage = tax_percent;
+                    item.tax_type_master = tax_type_master;
+                    
+                    if (window.calculate_row_amount_dynamic) {
+                        window.calculate_row_amount_dynamic(item);
+                    }
+                });
+                
+                frm.refresh_field("table_qecz");
+                if (window.calculate_totals_live) {
+                    window.calculate_totals_live(frm);
+                }
+            }
+        });
         set_tax_filters(frm);
     },
 

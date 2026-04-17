@@ -2592,9 +2592,9 @@ def check_customer_links(customer):
     linked_doctypes = [
         ("Invoice", "customer_id"),
         ("Invoice Collection", "customer_id"),
-        ("Estimation", "customer_id"),
-        ("Purchase", "customer_id"),
-        ("Purchase Collection", "customer_id")
+        ("Estimation", "client_name"),
+        ("Purchase", "vendor_id"),
+        ("Purchase Collection", "vendor_id")
     ]
 
     for dt, field in linked_doctypes:
@@ -2603,5 +2603,67 @@ def check_customer_links(customer):
 
     return False
 
+@frappe.whitelist()
+def delete_customer_location(row_name):
+    """Delete a Customer Location row after checking for Invoice links"""
+    if not row_name:
+        return {"status": "error", "message": "Missing row name"}
+    
+    # 1. Fetch the location detail
+    try:
+        loc = frappe.get_doc("Customer Location", row_name)
+    except frappe.DoesNotExistError:
+        return {"status": "error", "message": "Location not found"}
+        
+    # Use parent as the source of truth for Customer ID (child doc field 'customer' can be null)
+    customer_id = loc.customer or loc.parent
+    location_name = (loc.location_name or "").strip()
+    
+    # 2. Check if this specific location is used in any Invoice
+    # Using SQL for absolute control and TRIM handling to prevent bypass
+    usage = frappe.db.sql("""
+        SELECT name FROM tabInvoice 
+        WHERE customer_id = %s 
+        AND TRIM(location) = %s
+        LIMIT 1
+    """, (customer_id, location_name))
+    
+    if usage:
+        invoice_name = usage[0][0]
+        frappe.throw(_("Cannot delete location '<b>{0}</b>' because it is already linked to Invoice <b>{1}</b>.").format(location_name, invoice_name))
+        
+    # 3. Check for permissions (must have write permission on Customer)
+    if not frappe.has_permission("Customer", "write"):
+        frappe.throw(_("Not permitted to delete location"))
 
+    # 4. Proceed with deletion
+    frappe.delete_doc("Customer Location", row_name)
+    return {"status": "success"}
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_unlinked_invoices(doctype, txt, searchfield, start, page_len, filters):
+    """Returns Invoices that are NOT yet linked to any Purchase"""
+    link_search = "%%{0}%%".format(txt)
+    return frappe.db.sql("""
+        SELECT name, customer_name, grand_total 
+        FROM tabInvoice
+        WHERE (name LIKE %s OR customer_name LIKE %s)
+        AND name NOT IN (SELECT invoice_id FROM tabPurchase WHERE invoice_id IS NOT NULL)
+        ORDER BY creation DESC
+        LIMIT %s, %s
+    """, (link_search, link_search, start, page_len))
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
+    """Returns Purchases that are NOT yet linked to any Invoice"""
+    link_search = "%%{0}%%".format(txt)
+    return frappe.db.sql("""
+        SELECT name, vendor_name, grand_total 
+        FROM tabPurchase
+        WHERE (name LIKE %s OR vendor_name LIKE %s)
+        AND name NOT IN (SELECT purchase_id FROM tabInvoice WHERE purchase_id IS NOT NULL)
+        ORDER BY creation DESC
+        LIMIT %s, %s
+    """, (link_search, link_search, start, page_len))

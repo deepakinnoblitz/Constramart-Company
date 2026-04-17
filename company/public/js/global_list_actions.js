@@ -4,6 +4,26 @@
 const OriginalListView = frappe.views.ListView;
 
 frappe.views.ListView = class CustomListView extends OriginalListView {
+    setup_view() {
+        if (super.setup_view) super.setup_view();
+
+        // Register instance-specific listener for auto-refresh
+        // This ensures the current list refreshes whenever a document of its type is saved
+        frappe.ui.form.on(this.doctype, {
+            after_save: () => {
+                console.log(`[Auto-Refresh] Document saved for ${this.doctype}. Refreshing List...`);
+                this.refresh();
+            }
+        });
+
+        // Add realtime listener for server-side updates (handles both save and delete)
+        frappe.realtime.on("list_update", (data) => {
+            if (data && data.doctype === this.doctype) {
+                console.log(`[Realtime-Refresh] Update detected for ${this.doctype}. Refreshing...`);
+                this.refresh();
+            }
+        });
+    }
 
     render_list() {
         super.render_list();

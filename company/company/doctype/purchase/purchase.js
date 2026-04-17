@@ -57,6 +57,13 @@ frappe.ui.form.on("Purchase", {
             };
         });
 
+        // Filter Invoice ID to only show unlinked Invoices
+        frm.set_query("invoice_id", function () {
+            return {
+                query: "company.company.api.get_unlinked_invoices"
+            };
+        });
+
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Purchase Collection", { filters: { purchase: frm.doc.name } }).then(count => {
@@ -106,14 +113,25 @@ frappe.ui.form.on("Purchase", {
     default_tax_type(frm) {
         if (!frm.doc.default_tax_type) return;
 
-        // Get the selected tax type name
-        frappe.db.get_value("Tax Types", frm.doc.default_tax_type, "name", (r) => {
-            if (r && r.name === "Exempted") {
-                // Auto-fill all items with "Exempted"
+        // Get the selected tax type details (percentage is needed for instant recalculation)
+        frappe.db.get_value("Tax Types", frm.doc.default_tax_type, ["name", "tax_percentage"], (r) => {
+            if (r) {
+                const tax_percent = flt(r.tax_percentage || 0);
+
+                // Auto-fill all items and RECALCULATE immediately
                 frm.doc.table_qecz.forEach((item) => {
-                    frappe.model.set_value(item.doctype, item.name, "tax_type", "Exempted");
+                    frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
+                    frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
+                    
+                    if (window.purchase_calculate_row_amount) {
+                        window.purchase_calculate_row_amount(item);
+                    }
                 });
+                
                 frm.refresh_field("table_qecz");
+                if (window.purchase_calculate_totals_live) {
+                    window.purchase_calculate_totals_live(frm);
+                }
             }
         });
     },
@@ -170,8 +188,8 @@ frappe.ui.form.on("Purchase", {
                         setTimeout(() => {
                             // Calculate each row
                             (frm.doc.table_qecz || []).forEach(row => {
-                                if (window.calculate_row_amount_dynamic) {
-                                    window.calculate_row_amount_dynamic(row);
+                                if (window.purchase_calculate_row_amount) {
+                                    window.purchase_calculate_row_amount(row);
                                 }
                             });
 

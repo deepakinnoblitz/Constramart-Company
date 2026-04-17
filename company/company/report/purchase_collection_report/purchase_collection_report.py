@@ -29,7 +29,14 @@ def execute(filters=None):
     summary = get_summary(processed_data)
 
     if filters.get("show_last_collected"):
-        processed_data = [row for row in processed_data if row.get("row_num") == 1]
+        last_collection_map = {}
+        for d in processed_data:
+            # Since we iterate in DESC order (latest first), 
+            # we keep the first one we find for each purchase.
+            purchase_id = d.get("purchase")
+            if purchase_id not in last_collection_map:
+                last_collection_map[purchase_id] = d
+        processed_data = list(last_collection_map.values())
 
     total_count = len(processed_data)
 
@@ -72,11 +79,24 @@ def get_columns():
             "width": 60,
         },
         {
+            "label": "Collection ID",
+            "fieldname": "collection_id",
+            "fieldtype": "Link",
+            "options": "Purchase Collection",
+            "width": 140,
+        },
+        {
             "label": "Purchase",
             "fieldname": "purchase",
             "fieldtype": "Link",
             "options": "Purchase",
             "width": 140,
+        },
+        {
+            "label": "Purchase Date",
+            "fieldname": "purchase_date",
+            "fieldtype": "Date",
+            "width": 120,
         },
         {
             "label": "Vendor ID",
@@ -88,13 +108,37 @@ def get_columns():
         {
             "label": "Vendor Name",
             "fieldname": "vendor_name",
-            "width": 200,
+            "width": 180,
         },
         {
-            "label": "Payment Date",
+            "label": "Grand Purchase Total",
+            "fieldname": "grand_total",
+            "fieldtype": "Currency",
+            "width": 150,
+        },
+        {
+            "label": "Amount Collected",
+            "fieldname": "amount_paid",
+            "fieldtype": "Currency",
+            "width": 150,
+        },
+        {
+            "label": "Pending Amount",
+            "fieldname": "amount_pending",
+            "fieldtype": "Currency",
+            "width": 150,
+        },
+        {
+            "label": "Collection Date",
             "fieldname": "payment_date",
             "fieldtype": "Date",
             "width": 120,
+        },
+        {
+            "label": "Total Collection",
+            "fieldname": "total_collected",
+            "fieldtype": "Currency",
+            "width": 150,
         },
         {
             "label": "Mode of Payment",
@@ -102,24 +146,6 @@ def get_columns():
             "fieldtype": "Link",
             "options": "Payment Type",
             "width": 140,
-        },
-        {
-            "label": "Purchase Total",
-            "fieldname": "amount_to_pay",
-            "fieldtype": "Currency",
-            "width": 150,
-        },
-        {
-            "label": "Amount Paid",
-            "fieldname": "amount_paid",
-            "fieldtype": "Currency",
-            "width": 160,
-        },
-        {
-            "label": "Current Balance",
-            "fieldname": "amount_pending",
-            "fieldtype": "Currency",
-            "width": 150,
         },
         {
             "label": "Business Person",
@@ -142,8 +168,12 @@ def get_data(filters):
         values["purchase"] = filters["purchase"]
 
     if filters.get("vendor_id"):
-        conditions.append("pc.vendor_id = %(vendor_id)s")
-        values["vendor_id"] = filters["vendor_id"]
+        vendors = filters.get("vendor_id")
+        if isinstance(vendors, str):
+            vendors = [v.strip() for v in vendors.split(",") if v.strip()]
+        if vendors:
+            conditions.append("pc.vendor_id IN %(vendors)s")
+            values["vendors"] = vendors
 
     if filters.get("from_date"):
         conditions.append("pc.payment_date >= %(from_date)s")
@@ -157,7 +187,6 @@ def get_data(filters):
         conditions.append("pc.business_person = %(business_person)s")
         values["business_person"] = filters["business_person"]
 
-    # ⭐ CORE FIX: ignore fully collected purchases
     if filters.get("only_pending"):
         conditions.append("""
             pc.purchase IN (
@@ -168,37 +197,52 @@ def get_data(filters):
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
-    query = f"""
+    # Fetch raw data in chronological order for accurate running total
+    raw_results = frappe.db.sql(f"""
         SELECT
+            pc.name AS collection_id,
             pc.purchase,
+            p.bill_date AS purchase_date,
             pc.vendor_id,
             pc.vendor_name,
             pc.payment_date,
             pc.mode_of_payment,
-            p.grand_total AS amount_to_pay,
+            p.grand_total,
             pc.amount_paid,
-            (
-                p.grand_total -
-                SUM(pc.amount_paid)
-                OVER (
-                    PARTITION BY pc.purchase
-                    ORDER BY pc.payment_date, pc.creation
-                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                )
-            ) AS amount_pending,
             bp.business_person_name AS business_person,
-            ROW_NUMBER() OVER (
-                PARTITION BY pc.purchase
-                ORDER BY pc.payment_date DESC, pc.creation DESC
-            ) as row_num
+            pc.creation
         FROM `tabPurchase Collection` pc
         INNER JOIN `tabPurchase` p ON p.name = pc.purchase
         LEFT JOIN `tabBusiness Person` bp ON bp.name = pc.business_person
         {where_clause}
-        ORDER BY pc.purchase, pc.payment_date, pc.creation
-    """
+        ORDER BY p.bill_date ASC, p.name ASC, pc.creation ASC
+    """, values, as_dict=True)
 
-    return frappe.db.sql(query, values, as_dict=True)
+    processed_data = []
+    purchase_running_total = {}
+
+    for d in raw_results:
+        purchase_id = d.purchase
+        if purchase_id not in purchase_running_total:
+            purchase_running_total[purchase_id] = 0.0
+
+        purchase_running_total[purchase_id] += flt(d.amount_paid)
+
+        # Running total collected for this purchase
+        d.total_collected = purchase_running_total[purchase_id]
+        
+        # New pending balance after this payment
+        d.amount_pending = flt(d.grand_total) - d.total_collected
+        
+        processed_data.append(d)
+
+    # Final sort for display (Newest Purchase & Newest Collection First)
+    processed_data.sort(
+        key=lambda x: (x.purchase_date, x.purchase, x.creation),
+        reverse=True
+    )
+
+    return processed_data
 
 
 
@@ -206,26 +250,26 @@ def get_data(filters):
 # SUMMARY (PURCHASE-WISE — FINAL TOTALS)
 # ============================================================
 def get_summary(data):
-    purchase_map = {}
-    total_paid = 0
-
-    if data:
-        for row in data:
-            total_paid += flt(row.amount_paid)
-
-            # keep last balance per purchase (latest payment)
-            purchase_map[row.purchase] = {
-                "to_pay": flt(row.amount_to_pay),
-                "pending": flt(row.amount_pending),
-            }
-
-    total_to_pay = sum(v["to_pay"] for v in purchase_map.values())
-    total_pending = sum(v["pending"] for v in purchase_map.values())
+    total_to_pay = 0
+    total_paid_sum = 0
+    total_pending = 0
+    
+    unique_purchases = set()
+    
+    for d in data:
+        total_paid_sum += flt(d.get("amount_paid"))
+        
+        purchase = d.get("purchase")
+        if purchase not in unique_purchases:
+            unique_purchases.add(purchase)
+            # Take the state from the first record seen (which is the latest due to DESC sort)
+            total_to_pay += flt(d.get("grand_total"))
+            total_pending += flt(d.get("amount_pending"))
 
     return [
         {
             "label": "Total Collections",
-            "value": len(data),
+            "value": len(unique_purchases),
             "indicator": "green",
             "datatype": "Int",
         },
@@ -237,7 +281,7 @@ def get_summary(data):
         },
         {
             "label": "Total Amount Paid",
-            "value": total_paid,
+            "value": total_paid_sum,
             "indicator": "Green",
             "datatype": "Currency",
         },
