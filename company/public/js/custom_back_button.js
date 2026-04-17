@@ -15,10 +15,13 @@ function add_global_back_button(frm) {
 
     // Click action
     backBtn.on('click', function() {
-        if (frappe.get_prev_route && frappe.get_prev_route()) {
-            frappe.set_route(frappe.get_prev_route());
-        } else {
+        // Standard window.history.back is the most robust way to navigate back
+        // If we came from a list, this will take us back there correctly.
+        if (window.history.length > 1) {
             window.history.back();
+        } else if (frm.doctype) {
+            // Fallback: If no history, navigate to the List View
+            frappe.set_route('List', frm.doctype);
         }
     });
 

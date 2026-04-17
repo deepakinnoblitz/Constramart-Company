@@ -1,5 +1,6 @@
 import frappe
 import json
+from frappe.utils import flt
 
 @frappe.whitelist()
 def execute(filters=None):
@@ -40,6 +41,7 @@ def execute(filters=None):
         {"fieldname": "amount_exclusive", "label": "Invoice Total Excl. Tax", "fieldtype": "Currency", "width": 180},
         {"fieldname": "total_tax_amount", "label": "Total Tax", "fieldtype": "Currency", "width": 120},
         {"fieldname": "grand_total", "label": "Invoice Total", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "overall_discount", "label": "Discount", "fieldtype": "Currency", "width": 120},
         {"fieldname": "received_amount", "label": "Received", "fieldtype": "Currency", "width": 130},
         {"fieldname": "balance_amount", "label": "Pending", "fieldtype": "Currency", "width": 130},
         {"fieldname": "business_person_name", "label": "Business Person", "fieldtype": "Link", "options": "Business Person", "width": 150},
@@ -90,8 +92,16 @@ def execute(filters=None):
         values["business_person_name"] = filters["business_person_name"]
 
     if filters.get("location"):
-        conditions.append("inv.location = %(location)s")
-        values["location"] = filters["location"]
+        location = filters["location"]
+        if isinstance(location, list):
+            # Multiple locations selected — use IN clause
+            placeholders = ", ".join([f"%(location_{i})s" for i in range(len(location))])
+            conditions.append(f"inv.location IN ({placeholders})")
+            for i, l in enumerate(location):
+                values[f"location_{i}"] = l
+        else:
+            conditions.append("inv.location = %(location)s")
+            values["location"] = location
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -114,6 +124,9 @@ def execute(filters=None):
             inv.location,
             bp.business_person_name,
             inv.grand_total,
+            inv.total_amount,
+            inv.overall_discount,
+            inv.overall_discount_type,
             inv.received_amount,
             inv.balance_amount
         FROM `tabInvoice` inv
@@ -180,6 +193,19 @@ def execute(filters=None):
                 ">{status_label}</span>
             '''.strip()
 
+        # Calculate Overall Discount Amount
+        disc_amt = 0
+        total_before_disc = flt(row.get("total_amount", 0))
+        raw_disc = flt(row.get("overall_discount", 0))
+        disc_type = row.get("overall_discount_type") or "Flat"
+
+        if disc_type == "Percentage":
+            disc_amt = total_before_disc * (raw_disc / 100)
+        else:
+            disc_amt = raw_disc
+        
+        row["overall_discount"] = disc_amt
+
     # -------------------------------
     # TOTAL COUNT (INVOICES)
     # -------------------------------
@@ -197,6 +223,10 @@ def execute(filters=None):
             SUM(inv.grand_total) AS total_sales,
             SUM(inv.received_amount) AS total_received,
             SUM(inv.balance_amount) AS total_pending,
+            SUM(CASE 
+                WHEN inv.overall_discount_type = 'Percentage' THEN (inv.total_amount * inv.overall_discount / 100)
+                ELSE inv.overall_discount
+            END) AS total_discount,
             SUM(tax_sub.total_tax) AS total_tax,
             SUM(tax_sub.total_excl) AS total_excl
         FROM `tabInvoice` inv
@@ -241,6 +271,12 @@ def execute(filters=None):
             "value": total_sales,
             "datatype": "Currency",
             "indicator": "blue"
+        },
+        {
+            "label": "Total Discount",
+            "value": totals.total_discount or 0,
+            "datatype": "Currency",
+            "indicator": "red"
         },
         {
             "label": "Received",

@@ -187,8 +187,15 @@ def get_conditions(filters):
             values["customer"] = customer
     
     if filters.get("location"):
-        conditions.append("inv.location = %(location)s")
-        values["location"] = filters["location"]
+        location = filters["location"]
+        if isinstance(location, list):
+            placeholders = ", ".join([f"%(location_{i})s" for i in range(len(location))])
+            conditions.append(f"inv.location IN ({placeholders})")
+            for i, loc in enumerate(location):
+                values[f"location_{i}"] = loc
+        else:
+            conditions.append("inv.location = %(location)s")
+            values["location"] = location
 
     if filters.get("vendor"):
         vendor = filters["vendor"]

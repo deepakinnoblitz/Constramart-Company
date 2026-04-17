@@ -39,6 +39,7 @@ app_include_js = [
     "/assets/company/js/global_list_actions.js",
     "/assets/company/js/pagination.js",
     "/assets/company/js/auto_refresh.js",
+    "/assets/company/js/global_form_actions.js",
     # "/assets/company/js/force_calendar_view.js",
     # "/assets/company/js/expense_list.js",
     # "/assets/company/js/income_list.js",

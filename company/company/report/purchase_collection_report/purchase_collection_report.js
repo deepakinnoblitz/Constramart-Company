@@ -26,14 +26,11 @@ frappe.query_reports["Purchase Collection Report"] = {
         {
             fieldname: "vendor_id",
             label: "Vendor",
-            fieldtype: "Link",
-            options: "Customer",
-            get_query: () => {
-                return {
-                    filters: {
-                        customer_type: "Purchase"
-                    }
-                };
+            fieldtype: "MultiSelectList",
+            get_data: function (txt) {
+                return frappe.db.get_link_options("Customer", txt, {
+                    customer_type: "Purchase"
+                });
             }
         },
         {
@@ -43,13 +40,8 @@ frappe.query_reports["Purchase Collection Report"] = {
             options: "Business Person"
         },
         {
-            fieldname: "only_pending",
-            label: "Only Pending",
-            fieldtype: "Check"
-        },
-        {
             fieldname: "show_last_collected",
-            label: "Show Last Collected",
+            label: "Show Only Last Collection",
             fieldtype: "Check",
             default: 0
         }
@@ -167,10 +159,9 @@ frappe.query_reports["Purchase Collection Summary"] = {
         },
         { fieldname: "from_date", label: "From Date", fieldtype: "Date" },
         { fieldname: "to_date", label: "To Date", fieldtype: "Date" },
-        { fieldname: "only_pending", label: "Only Pending", fieldtype: "Check" },
         {
             fieldname: "show_last_collected",
-            label: "Show Last Collected",
+            label: "Show Only Last Collection",
             fieldtype: "Check",
             default: 1
         }

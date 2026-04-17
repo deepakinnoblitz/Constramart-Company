@@ -107,8 +107,16 @@ frappe.ui.form.on("Purchase Items", {
     quantity: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
     price: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
     discount: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
-    discount_type: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
-    tax_type: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); }
+    discount_type: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        // Explicitly clear discount if type is not Flat or Percentage
+        if (row.discount_type !== "Flat" && row.discount_type !== "Percentage") {
+            frappe.model.set_value(cdt, cdn, "discount", 0);
+        }
+        purchase_child_update(frm, cdt, cdn);
+    },
+    tax_type: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); },
+    tax_percent: function (frm, cdt, cdn) { purchase_child_update(frm, cdt, cdn); }
 });
 
 // =================== HELPER FUNCTIONS ===================
@@ -124,7 +132,7 @@ function purchase_validate_and_calculate(row, frm) {
     purchase_calculate_totals_live(frm);
 }
 
-function purchase_calculate_row_amount(row) {
+window.purchase_calculate_row_amount = function purchase_calculate_row_amount(row) {
     let base_amount = (row.quantity || 0) * (row.price || 0);
 
     let discount_amt = 0;
@@ -133,11 +141,12 @@ function purchase_calculate_row_amount(row) {
 
     let taxable = base_amount - discount_amt;
 
-    // Use the fetched tax_percent from Tax Types (not hardcoded)
-    let tax_rate = parseFloat(row.tax_percent || 0);
+    // Use the fetched tax_percent from Tax Types (respect 0 as a valid value)
+    let tax_rate = (row.tax_percent !== undefined && row.tax_percent !== null) ? flt(row.tax_percent) : flt(row.tax_percentage || 0);
 
     row.tax_amount = (taxable * tax_rate) / 100;
-    return taxable + row.tax_amount;
+    row.sub_total = taxable + row.tax_amount; // Ensure sub_total is updated on the row
+    return row.sub_total;
 }
 
 // =================== GRAND TOTAL CALCULATION ===================

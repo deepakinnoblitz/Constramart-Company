@@ -1,4 +1,3 @@
-
 frappe.query_reports["Sales Analytics"] = {
     auto_run: true,
 
@@ -54,8 +53,10 @@ frappe.query_reports["Sales Analytics"] = {
         {
             fieldname: "location",
             label: __("Location"),
-            fieldtype: "Select",
-            options: [""]
+            fieldtype: "MultiSelectList",
+            get_data: function(txt) {
+                return frappe.utils.filter_dict(frappe.query_report._location_options || [], { label: ["like", "%" + txt + "%"] });
+            }
         },
     ],
 
@@ -107,20 +108,17 @@ frappe.query_reports["Sales Analytics"] = {
                     },
                     callback: function (r) {
                         console.log("📍 Locations sync result:", r.message);
-                        let options = [""];
                         if (r.message && r.message.length > 0) {
-                            options = options.concat(r.message.map(row => row.location_name));
+                            options = r.message.map(row => ({ value: row.location_name, label: row.location_name, description: "" }));
                             frappe.show_alert({ message: __("Available locations updated"), indicator: 'green' });
                         } else {
-                            options = ["No Location Found"];
+                            options = [{ value: "none", label: "No Location Found" }];
                         }
 
-                        if (report.set_filter_property) {
-                            report.set_filter_property("location", "options", options);
-                        } else {
-                            report.page.fields_dict.location.df.options = options;
-                            report.page.fields_dict.location.refresh();
-                        }
+                        report._location_options = options;
+                        
+                        // Clear current location selections if they are no longer valid (optional)
+                        // report.set_filter_value("location", []);
                     }
                 });
             } else {

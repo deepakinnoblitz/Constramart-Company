@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "PURC.#####",
  "creation": "2025-12-29 11:28:00",
  "doctype": "DocType",
@@ -72,7 +71,6 @@
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Mode of Payment",
    "options": "Payment Type",
    "reqd": 1
@@ -137,6 +135,7 @@
   {
    "fieldname": "business_person",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Business Person",
    "options": "Business Person",
    "reqd": 1
@@ -145,7 +144,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-12 10:51:50.138457",
+ "modified": "2026-04-17 14:05:46.904087",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Collection",
