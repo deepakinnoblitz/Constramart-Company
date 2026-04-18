@@ -11,8 +11,19 @@ frappe.ui.form.on("Invoice", {
             frm.add_child("table_qecz");
             frm.refresh_field("table_qecz");
         }
+
+        // Handle Purchase ID synchronization from Reference Purchase (for Double-Link Protection)
+        if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
+            frm.set_value("purchase_id", frm.doc.reference_purchase);
+        }
     },
     refresh(frm) {
+        // Source Link Sync: If Reference Purchase exists but Purchase ID is empty, sync them
+        // This is required to trigger the backend validation that prevents double-linking
+        if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
+            frm.set_value("purchase_id", frm.doc.reference_purchase);
+        }
+
         toggle_conversion_section(frm);
         set_tax_filters(frm);
         setup_location_trigger(frm);
@@ -38,11 +49,12 @@ frappe.ui.form.on("Invoice", {
             }
         );
 
-        if (!frm.is_new()) {
+        // Lock Purchase ID after save to prevent breaking the link
+        if (!frm.is_new() && frm.doc.purchase_id) {
             frm.set_df_property("purchase_id", "read_only", 1);
         } else {
             frm.set_df_property("purchase_id", "read_only", 0);
-            
+
             // Filter Purchase ID to only show unlinked Purchases
             frm.set_query("purchase_id", function () {
                 return {
@@ -190,17 +202,17 @@ frappe.ui.form.on("Invoice", {
                 // Auto-fill all items and RECALCULATE immediately
                 (frm.doc.table_qecz || []).forEach((item) => {
                     frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
-                    
+
                     // Unified field update (DocType field is 'tax_percent', Script expects 'tax_percentage')
                     frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
                     item.tax_percentage = tax_percent;
                     item.tax_type_master = tax_type_master;
-                    
+
                     if (window.calculate_row_amount_dynamic) {
                         window.calculate_row_amount_dynamic(item);
                     }
                 });
-                
+
                 frm.refresh_field("table_qecz");
                 if (window.calculate_totals_live) {
                     window.calculate_totals_live(frm);
@@ -421,11 +433,11 @@ function show_location_dialog(frm) {
             if (locations.includes(frm.doc.location)) {
                 d.set_value("existing_location", frm.doc.location);
                 d.set_value("location_name", frm.doc.location);
-                
+
                 // Trigger logic to set address and hide fields
                 let row = customer.location.find(r => r.location_name === frm.doc.location);
                 if (row) d.set_value("address", row.address || "");
-                
+
                 d.get_field("location_name").df.reqd = 0;
                 d.get_field("location_name").df.hidden = 1;
                 d.get_field("address").df.hidden = 1;

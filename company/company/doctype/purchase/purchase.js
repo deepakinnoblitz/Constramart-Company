@@ -64,6 +64,11 @@ frappe.ui.form.on("Purchase", {
             };
         });
 
+        // Lock Invoice ID after save to prevent breaking the link
+        if (!frm.is_new() && frm.doc.invoice_id) {
+            frm.set_df_property("invoice_id", "read_only", 1);
+        }
+
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Purchase Collection", { filters: { purchase: frm.doc.name } }).then(count => {
