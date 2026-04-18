@@ -70,7 +70,13 @@ frappe.ui.form.on("Purchase", {
     },
 
     overall_discount: function (frm) { purchase_calculate_totals_live(frm); },
-    overall_discount_type: function (frm) { purchase_calculate_totals_live(frm); },
+    overall_discount_type: function (frm) {
+        // Explicitly clear discount if type is not Flat or Percentage
+        if (frm.doc.overall_discount_type !== "Flat" && frm.doc.overall_discount_type !== "Percentage") {
+            frm.set_value("overall_discount", 0);
+        }
+        purchase_calculate_totals_live(frm);
+    },
 
     refresh(frm) {
         // Detect rounding mode from existing roundoff
@@ -171,6 +177,9 @@ window.purchase_calculate_totals_live = function (frm) {
         natural_total = total_amount - discount_val;
     } else if (discount_type_val === "Percentage") {
         natural_total = total_amount - (total_amount * discount_val / 100);
+    } else {
+        // No discount type = No discount
+        natural_total = total_amount;
     }
 
     natural_total = natural_total < 0 ? 0.0 : flt(natural_total, 2);
