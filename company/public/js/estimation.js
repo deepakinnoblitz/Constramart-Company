@@ -37,7 +37,13 @@ frappe.ui.form.on("Estimation", {
     },
 
     overall_discount(frm) { calculate_totals_live(frm); },
-    overall_discount_type(frm) { calculate_totals_live(frm); },
+    overall_discount_type(frm) {
+        // Explicitly clear discount if type is not Flat or Percentage
+        if (frm.doc.overall_discount_type !== "Flat" && frm.doc.overall_discount_type !== "Percentage") {
+            frm.set_value("overall_discount", 0);
+        }
+        calculate_totals_live(frm);
+    },
     table_qecz_add(frm) { calculate_totals_live(frm); },
     table_qecz_remove(frm) { calculate_totals_live(frm); },
 
@@ -179,6 +185,9 @@ function calculate_totals_live(frm) {
         natural_total -= overall_disc;
     } else if (disc_type === "Percentage") {
         natural_total -= (total * overall_disc / 100);
+    } else {
+        // No discount type = No discount
+        natural_total = total;
     }
 
     if (natural_total < 0) natural_total = 0;
