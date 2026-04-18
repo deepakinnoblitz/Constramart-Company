@@ -17,6 +17,13 @@ class Invoice(Document):
         if not self.get("table_qecz"):
             frappe.throw(_("At least one item is required in the Items table."))
 
+        for item in self.table_qecz:
+            if flt(item.price) <= 0:
+                frappe.throw(_("Price cannot be 0 or less for item {0} in row {1}").format(
+                    frappe.bold(item.service or "Unknown"), 
+                    frappe.bold(item.idx)
+                ))
+
         self.validate_purchase_link()
         self.calculate_child_rows()
         self.calculate_totals()

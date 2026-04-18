@@ -145,7 +145,7 @@ def get_data(filters, limit=None, offset=None):
             FROM `tabInvoice Items`
             GROUP BY parent
         ) inv_totals ON inv_totals.parent = inv.name
-        LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR inv.purchase_id = pur.name)
+        LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR pur.invoice_id = inv.name OR inv.purchase_id = pur.name OR inv.reference_purchase = pur.name)
         LEFT JOIN (
             SELECT parent, SUM(tax_amount) as pur_tax, SUM(sub_total - tax_amount) as pur_excl
             FROM `tabPurchase Items`
@@ -201,11 +201,11 @@ def get_conditions(filters):
         vendor = filters["vendor"]
         if isinstance(vendor, list):
             placeholders = ", ".join([f"%(vendor_{i})s" for i in range(len(vendor))])
-            conditions.append(f"EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR inv.purchase_id = p.name) AND p.vendor_id IN ({placeholders}))")
+            conditions.append(f"EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR p.invoice_id = inv.name OR inv.purchase_id = p.name OR inv.reference_purchase = p.name) AND p.vendor_id IN ({placeholders}))")
             for i, v in enumerate(vendor):
                 values[f"vendor_{i}"] = v
         else:
-            conditions.append("EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR inv.purchase_id = p.name) AND p.vendor_id = %(vendor)s)")
+            conditions.append(f"EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR p.invoice_id = inv.name OR inv.purchase_id = p.name OR inv.reference_purchase = p.name) AND p.vendor_id = %(vendor)s)")
             values["vendor"] = vendor
 
     if filters.get("sales_business_person"):
@@ -213,7 +213,7 @@ def get_conditions(filters):
         values["sales_business_person"] = filters["sales_business_person"]
 
     if filters.get("purchase_business_person"):
-        conditions.append("EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR inv.purchase_id = p.name) AND p.business_person_name = %(purchase_business_person)s)")
+        conditions.append(f"EXISTS (SELECT name FROM `tabPurchase` p WHERE (p.reference_invoice = inv.name OR p.invoice_id = inv.name OR inv.purchase_id = p.name OR inv.reference_purchase = p.name) AND p.business_person_name = %(purchase_business_person)s)")
         values["purchase_business_person"] = filters["purchase_business_person"]
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
@@ -227,7 +227,7 @@ def get_total_count(filters):
         SELECT COUNT(*) FROM (
             SELECT inv.name 
             FROM `tabInvoice` inv 
-            LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR inv.purchase_id = pur.name)
+            LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR pur.invoice_id = inv.name OR inv.purchase_id = pur.name OR inv.reference_purchase = pur.name)
             {conditions} 
             GROUP BY inv.name
             {having_clause}
@@ -264,7 +264,7 @@ def get_report_summary(filters):
                 FROM `tabInvoice Items`
                 GROUP BY parent
             ) inv_totals ON inv_totals.parent = inv.name
-            LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR inv.purchase_id = pur.name)
+            LEFT JOIN `tabPurchase` pur ON (pur.reference_invoice = inv.name OR pur.invoice_id = inv.name OR inv.purchase_id = pur.name OR inv.reference_purchase = pur.name)
             LEFT JOIN (
                 SELECT parent, SUM(tax_amount) as pur_tax, SUM(sub_total - tax_amount) as pur_excl
                 FROM `tabPurchase Items`

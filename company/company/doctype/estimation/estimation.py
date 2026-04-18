@@ -6,6 +6,12 @@ from frappe.utils import getdate
 class Estimation(Document):
     
     def validate(self):
+        for item in self.get("table_qecz"):
+            if frappe.utils.flt(item.price) <= 0:
+                frappe.throw(frappe._("Price cannot be 0 or less for item {0} in row {1}").format(
+                    frappe.bold(item.service or "Unknown"),
+                    frappe.bold(item.idx)
+                ))
         self.calculate_child_rows()
         self.calculate_totals()
     
