@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "PT.#####",
  "creation": "2026-03-11 11:42:25.741830",
  "doctype": "DocType",
@@ -20,7 +19,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-11 11:44:16.388225",
+ "modified": "2026-04-18 11:38:59.413811",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Payment Terms",
