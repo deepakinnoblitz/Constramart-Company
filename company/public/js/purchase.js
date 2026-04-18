@@ -65,6 +65,11 @@ frappe.ui.form.on("Purchase", {
             }, 600);
         });
 
+        // Handle Invoice ID synchronization from Reference Invoice (for Double-Link Protection)
+        if (frm.doc.reference_invoice && !frm.doc.invoice_id) {
+            frm.set_value("invoice_id", frm.doc.reference_invoice);
+        }
+
         // Trigger initial calculation
         purchase_calculate_totals_live(frm);
     },
@@ -79,6 +84,9 @@ frappe.ui.form.on("Purchase", {
     },
 
     refresh(frm) {
+        // Immediate Link Sync
+        sync_purchase_link_ids(frm);
+
         // Detect rounding mode from existing roundoff
         if (frm.doc.roundoff) {
             const natural = flt(frm.doc.grand_total - frm.doc.roundoff, 2);
@@ -126,6 +134,12 @@ frappe.ui.form.on("Purchase Items", {
 });
 
 // =================== HELPER FUNCTIONS ===================
+function sync_purchase_link_ids(frm) {
+    if (frm.doc.reference_invoice && !frm.doc.invoice_id) {
+        frm.set_value("invoice_id", frm.doc.reference_invoice, null, true);
+    }
+}
+
 function purchase_child_update(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
     if (!row) return;

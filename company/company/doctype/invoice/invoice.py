@@ -7,6 +7,10 @@ from frappe.utils import getdate, flt
 class Invoice(Document):
     
     def validate(self):
+        # Auto-fill purchase_id from reference_purchase if missing (Back-end Handshake)
+        if self.reference_purchase and not self.purchase_id:
+            self.purchase_id = self.reference_purchase
+
         if not self.is_new():
             self.ensure_no_linked_collections()
         
@@ -21,7 +25,14 @@ class Invoice(Document):
     def validate_purchase_link(self):
         if self.purchase_id:
             # Check if this purchase is already linked to another Invoice
-            existing_invoice = frappe.db.get_value("Purchase", self.purchase_id, "reference_invoice")
+            # We check both 'reference_invoice' (updated on save) AND 'invoice_id' (if it was linked from Purchase form)
+            purchase_data = frappe.db.get_value("Purchase", self.purchase_id, ["reference_invoice", "invoice_id"], as_dict=True)
+
+            if not purchase_data:
+                return
+
+            existing_invoice = purchase_data.reference_invoice or purchase_data.invoice_id
+
             if existing_invoice and existing_invoice != self.name:
                 # Fetch Names for better display
                 purchase_vendor = frappe.db.get_value("Purchase", self.purchase_id, "vendor_name")

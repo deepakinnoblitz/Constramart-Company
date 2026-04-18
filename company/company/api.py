@@ -2643,13 +2643,16 @@ def delete_customer_location(row_name):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_unlinked_invoices(doctype, txt, searchfield, start, page_len, filters):
-    """Returns Invoices that are NOT yet linked to any Purchase"""
+    """Returns Invoices that are NOT yet linked to any Purchase (Check both directions)"""
     link_search = "%%{0}%%".format(txt)
     return frappe.db.sql("""
         SELECT name, customer_name, grand_total 
         FROM tabInvoice
         WHERE (name LIKE %s OR customer_name LIKE %s)
         AND name NOT IN (SELECT invoice_id FROM tabPurchase WHERE invoice_id IS NOT NULL)
+        AND name NOT IN (SELECT reference_invoice FROM tabPurchase WHERE reference_invoice IS NOT NULL)
+        AND purchase_id IS NULL
+        AND reference_purchase IS NULL
         ORDER BY creation DESC
         LIMIT %s, %s
     """, (link_search, link_search, start, page_len))
@@ -2657,13 +2660,16 @@ def get_unlinked_invoices(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
-    """Returns Purchases that are NOT yet linked to any Invoice"""
+    """Returns Purchases that are NOT yet linked to any Invoice (Check both directions)"""
     link_search = "%%{0}%%".format(txt)
     return frappe.db.sql("""
         SELECT name, vendor_name, grand_total 
         FROM tabPurchase
         WHERE (name LIKE %s OR vendor_name LIKE %s)
         AND name NOT IN (SELECT purchase_id FROM tabInvoice WHERE purchase_id IS NOT NULL)
+        AND name NOT IN (SELECT reference_purchase FROM tabInvoice WHERE reference_purchase IS NOT NULL)
+        AND invoice_id IS NULL
+        AND reference_invoice IS NULL
         ORDER BY creation DESC
         LIMIT %s, %s
     """, (link_search, link_search, start, page_len))
