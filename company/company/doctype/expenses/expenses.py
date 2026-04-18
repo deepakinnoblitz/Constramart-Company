@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, flt
 
@@ -45,6 +46,13 @@ class Expenses(Document):
             self.name = self.expense_no
 
     def validate(self):
-        """Ensure at least one row in Expenses Items"""
+        """Ensure at least one row in Expenses Items and validate price"""
         if not self.table_qecz or len(self.table_qecz) == 0:
             frappe.throw(_("At least one Expense Item is required in 'Expenses Items' table."))
+
+        for item in self.table_qecz:
+            if flt(item.price) <= 0:
+                frappe.throw(_("Price cannot be 0 or less for item {0} in row {1}").format(
+                    frappe.bold(item.items or "Unknown"), 
+                    frappe.bold(item.idx)
+                ))
