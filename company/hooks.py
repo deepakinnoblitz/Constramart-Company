@@ -36,7 +36,7 @@ app_include_js = [
     "/assets/company/js/parent_sidebar.js?v=1",
     "/assets/company/js/sidebar-active-state.js",
     "/assets/company/js/roundoff_buttons.js",
-    "/assets/company/js/global_list_actions.js?v=1",
+    "/assets/company/js/global_list_actions.js?v=2",
     "/assets/company/js/pagination.js",
     "/assets/company/js/auto_refresh.js",
     "/assets/company/js/global_form_actions.js?v=1",
