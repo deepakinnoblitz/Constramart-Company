@@ -65,8 +65,10 @@ frappe.ui.form.on("Purchase", {
         });
 
         // Lock Invoice ID after save to prevent breaking the link
-        if (!frm.is_new() && frm.doc.invoice_id) {
+        if (!frm.is_new()) {
             frm.set_df_property("invoice_id", "read_only", 1);
+        } else {
+            frm.set_df_property("invoice_id", "read_only", 0);
         }
 
         // Lock form if collections exist
@@ -123,16 +125,19 @@ frappe.ui.form.on("Purchase", {
             if (r) {
                 const tax_percent = flt(r.tax_percentage || 0);
 
-                // Auto-fill all items and RECALCULATE immediately
-                frm.doc.table_qecz.forEach((item) => {
-                    frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
-                    frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
-                    
-                    if (window.purchase_calculate_row_amount) {
-                        window.purchase_calculate_row_amount(item);
-                    }
-                });
-                
+                // Propagation Logic: ONLY auto-fill all items IF the type is 'Exempted'
+                // For all other GST rates, items remain independent to allow mixed rates.
+                if (r.name === "Exempted") {
+                    frm.doc.table_qecz.forEach((item) => {
+                        frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
+                        frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
+
+                        if (window.purchase_calculate_row_amount) {
+                            window.purchase_calculate_row_amount(item);
+                        }
+                    });
+                }
+
                 frm.refresh_field("table_qecz");
                 if (window.purchase_calculate_totals_live) {
                     window.purchase_calculate_totals_live(frm);
@@ -241,7 +246,8 @@ frappe.ui.form.on("Purchase Items", {
         let item = locals[cdt][cdn];
 
         if (item.tax_type) {
-            frm.set_value("default_tax_type", item.tax_type);
+            // Set default_tax_type based on row selection (SILENT sync to avoid cascading overwrites)
+            frm.set_value("default_tax_type", item.tax_type, null, true);
         } else {
             // Check if ANY other row has a tax_type
             let other_tax = (frm.doc.table_qecz || []).find(d => d.tax_type);

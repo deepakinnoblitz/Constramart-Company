@@ -147,16 +147,15 @@ class Invoice(Document):
                 self.is_new_location = 0
 
     def on_update(self):
-        """Update Purchase reference when purchase_id changes"""
-        if self.has_value_changed("purchase_id"):
-            # Clear old purchase reference
-            old_purchase_id = self.get_doc_before_save().purchase_id if self.get_doc_before_save() else None
-            if old_purchase_id:
-                frappe.db.set_value("Purchase", old_purchase_id, "reference_invoice", None)
-            
-            # Set new purchase reference
-            if self.purchase_id:
-                frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
+        """Ensure Purchase reference is synchronized with this Invoice"""
+        if self.purchase_id:
+            # Set this Invoice as the reference on the linked Purchase
+            frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
+        else:
+            # If purchase_id was cleared, remove the reference from the old purchase
+            old_doc = self.get_doc_before_save()
+            if old_doc and old_doc.purchase_id:
+                frappe.db.set_value("Purchase", old_doc.purchase_id, "reference_invoice", None)
     
     def after_insert(self):
         # Update Purchase with Invoice reference

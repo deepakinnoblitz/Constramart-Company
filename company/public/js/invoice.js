@@ -48,11 +48,6 @@ frappe.ui.form.on("Invoice", {
             }, 600); // Wait for batch internal deletion to finish
         });
 
-        // Handle Purchase ID synchronization from Reference Purchase (for Double-Link Protection)
-        if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
-            frm.set_value("purchase_id", frm.doc.reference_purchase);
-        }
-
         calculate_totals_live(frm);
     },
 
@@ -67,9 +62,6 @@ frappe.ui.form.on("Invoice", {
     table_qecz_add(frm) { calculate_totals_live(frm); },
 
     refresh(frm) {
-        // Immediate Link Sync
-        sync_invoice_link_ids(frm);
-
         // Detect rounding mode from existing roundoff
         if (frm.doc.roundoff) {
             const natural = flt(frm.doc.grand_total - frm.doc.roundoff, 2);
@@ -136,12 +128,6 @@ frappe.ui.form.on("Invoice Items", {
 // ======================================================
 // HELPERS
 // ======================================================
-function sync_invoice_link_ids(frm) {
-    if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
-        frm.set_value("purchase_id", frm.doc.reference_purchase, null, true);
-    }
-}
-
 function trigger_child_update(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
     validate_and_calculate(row, frm);

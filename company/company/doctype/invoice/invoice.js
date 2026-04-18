@@ -12,17 +12,8 @@ frappe.ui.form.on("Invoice", {
             frm.refresh_field("table_qecz");
         }
 
-        // Handle Purchase ID synchronization from Reference Purchase (for Double-Link Protection)
-        if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
-            frm.set_value("purchase_id", frm.doc.reference_purchase);
-        }
     },
     refresh(frm) {
-        // Source Link Sync: If Reference Purchase exists but Purchase ID is empty, sync them
-        // This is required to trigger the backend validation that prevents double-linking
-        if (frm.doc.reference_purchase && !frm.doc.purchase_id) {
-            frm.set_value("purchase_id", frm.doc.reference_purchase);
-        }
 
         toggle_conversion_section(frm);
         set_tax_filters(frm);
@@ -50,7 +41,7 @@ frappe.ui.form.on("Invoice", {
         );
 
         // Lock Purchase ID after save to prevent breaking the link
-        if (!frm.is_new() && frm.doc.purchase_id) {
+        if (!frm.is_new()) {
             frm.set_df_property("purchase_id", "read_only", 1);
         } else {
             frm.set_df_property("purchase_id", "read_only", 0);
@@ -199,19 +190,20 @@ frappe.ui.form.on("Invoice", {
                 const tax_percent = flt(r.tax_percentage || 0);
                 const tax_type_master = r.tax_type;
 
-                // Auto-fill all items and RECALCULATE immediately
-                (frm.doc.table_qecz || []).forEach((item) => {
-                    frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
+                // Propagation Logic: ONLY auto-fill all items IF the type is 'Exempted'
+                // For all other GST rates, items remain independent to allow mixed rates.
+                if (r.name === "Exempted") {
+                    (frm.doc.table_qecz || []).forEach((item) => {
+                        frappe.model.set_value(item.doctype, item.name, "tax_type", r.name);
+                        frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
+                        item.tax_percentage = tax_percent;
+                        item.tax_type_master = tax_type_master;
 
-                    // Unified field update (DocType field is 'tax_percent', Script expects 'tax_percentage')
-                    frappe.model.set_value(item.doctype, item.name, "tax_percent", tax_percent);
-                    item.tax_percentage = tax_percent;
-                    item.tax_type_master = tax_type_master;
-
-                    if (window.calculate_row_amount_dynamic) {
-                        window.calculate_row_amount_dynamic(item);
-                    }
-                });
+                        if (window.calculate_row_amount_dynamic) {
+                            window.calculate_row_amount_dynamic(item);
+                        }
+                    });
+                }
 
                 frm.refresh_field("table_qecz");
                 if (window.calculate_totals_live) {
@@ -324,8 +316,9 @@ frappe.ui.form.on("Invoice Items", {
     tax_type(frm, cdt, cdn) {
         let item = locals[cdt][cdn];
         if (item.tax_type) {
-            // Set default_tax_type based on row selection
-            frm.set_value("default_tax_type", item.tax_type);
+            // Set default_tax_type based on row selection (SILENT sync to avoid cascading overwrites)
+            frm.set_value("default_tax_type", item.tax_type, null, true);
+            set_tax_filters(frm);
         } else {
             // If tax_type is cleared, check if ANY other row has a tax_type
             let other_tax = (frm.doc.table_qecz || []).find(d => d.tax_type);
