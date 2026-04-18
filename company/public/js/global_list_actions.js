@@ -16,10 +16,18 @@ frappe.views.ListView = class CustomListView extends OriginalListView {
             }
         });
 
-        // Add realtime listener for server-side updates (handles both save and delete)
+        // Add realtime listener for server-side updates
+        // We listen to both 'list_update' (custom) and 'doc_update' (standard)
         frappe.realtime.on("list_update", (data) => {
             if (data && data.doctype === this.doctype) {
-                console.log(`[Realtime-Refresh] Update detected for ${this.doctype}. Refreshing...`);
+                console.log(`[Realtime-Refresh] List update detected for ${this.doctype}. Refreshing...`);
+                this.refresh();
+            }
+        });
+
+        frappe.realtime.on("doc_update", (data) => {
+            if (data && data.doctype === this.doctype) {
+                console.log(`[Realtime-Refresh] Document update detected for ${this.doctype}. Refreshing...`);
                 this.refresh();
             }
         });
@@ -130,13 +138,32 @@ function add_global_action_buttons(listview) {
         e.stopPropagation();
 
         let name = $(this).data("name");
+        let $row = $(this).closest(".list-row-container"); // 🚀 Capture row for instant removal
+
         frappe.confirm(`Delete ${listview.doctype} ${name}?`, () => {
             frappe.call({
                 method: "frappe.client.delete",
                 args: { doctype: listview.doctype, name },
-                callback: () => {
-                    frappe.show_alert(`${listview.doctype} deleted`);
-                    listview.refresh();
+                callback: (r) => {
+                    if (!r.exc) {
+                        frappe.show_alert(`${listview.doctype} deleted`);
+
+                        // 1. Instant UI Feedback: Fade out and remove
+                        $row.fadeOut(300, function () {
+                            $(this).remove();
+                        });
+
+                        // 2. Clear from local data array to prevent ghost entries
+                        if (listview.data) {
+                            listview.data = listview.data.filter(d => d.name !== name);
+                        }
+
+                        // 3. Clear client-side cache (locals) to prevent stale data on recreate
+                        frappe.model.remove_from_locals(listview.doctype, name);
+
+                        // 4. Trigger refresh to sync count and other UI elements
+                        listview.refresh();
+                    }
                 }
             });
         });
