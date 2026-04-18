@@ -8,9 +8,9 @@ app_license = "mit"
 app_include_js = [
     # "/assets/company/js/leads.js",
     "/assets/company/js/quotation.js",
-    "/assets/company/js/estimation.js",
-    "/assets/company/js/invoice.js?v=1",
-    "/assets/company/js/purchase.js?v=1",
+    "/assets/company/js/estimation.js?v=2",
+    "/assets/company/js/invoice.js?v=2",
+    "/assets/company/js/purchase.js?v=2",
     "/assets/company/js/expenses.js",
     "/assets/company/js/custom.js",
     "/assets/company/js/attendance.js",
