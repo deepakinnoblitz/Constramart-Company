@@ -110,6 +110,22 @@ frappe.ui.form.on("Purchase", {
             }, __("Collections"));
         }
     },
+    validate(frm) {
+        // Validate Price > 0
+        (frm.doc.table_qecz || []).forEach(item => {
+            if (flt(item.price) <= 0) {
+                frappe.msgprint({
+                    title: __("Invalid Price"),
+                    message: __("Price cannot be 0 or less for item {0} in row {1}").format(
+                        "<b>" + (item.service || "Unknown") + "</b>", 
+                        "<b>" + item.idx + "</b>"
+                    ),
+                    indicator: "red"
+                });
+                frappe.validated = false;
+            }
+        });
+    },
     table_qecz_remove(frm) {
         setTimeout(() => {
             if (window.purchase_calculate_totals_live) {

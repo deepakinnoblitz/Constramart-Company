@@ -12,6 +12,13 @@ class Purchase(Document):
         if self.reference_invoice and not self.invoice_id:
             self.invoice_id = self.reference_invoice
 
+        for item in self.get("table_qecz"):
+            if frappe.utils.flt(item.price) <= 0:
+                frappe.throw(frappe._("Price cannot be 0 or less for item {0} in row {1}").format(
+                    frappe.bold(item.service or "Unknown"),
+                    frappe.bold(item.idx)
+                ))
+
         # Check if Purchase Collection exists - prevent editing
         if not self.is_new():
             self.check_purchase_collections()
