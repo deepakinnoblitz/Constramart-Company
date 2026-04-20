@@ -18,7 +18,6 @@
   "country",
   "state",
   "city",
-  "location",
   "billing_address",
   "section_break_xlhq",
   "leads_from",
@@ -173,12 +172,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "location",
-   "fieldtype": "Data",
-   "in_standard_filter": 1,
-   "label": "Location "
-  },
-  {
    "fieldname": "section_break_ctas",
    "fieldtype": "Section Break"
   },
@@ -194,7 +187,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-10 12:57:45.757697",
+ "modified": "2026-04-20 11:24:49.268019",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Leads",
