@@ -2495,7 +2495,6 @@ def convert_lead_to_customer(lead_name):
     customer.country = lead.country
     customer.state = lead.state
     customer.city = lead.city
-    customer.location = lead.location
     customer.billing_address = lead.billing_address
     customer.remarks = lead.remarks
     customer.customer_type = "Sales"
