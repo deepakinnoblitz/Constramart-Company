@@ -1,10 +1,58 @@
-@media (min-width: 992px) {
-  [data-page-route=Workspaces] .layout-main {
-    height: calc(100vh - var(--navbar-height) - var(--page-head-height) - 5px) !important;
-    padding: 20px !important;
-    margin: auto !important;
-    max-width: none !important;
-  }
+/* Instant layout styling (avoids JS routing flicker on refresh) */
+.layout-main {
+  height: calc(100vh - var(--navbar-height) - var(--page-head-height) - 5px) !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Align Page Header and Workspace Container immediately */
+.page-head .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 20px !important;
+}
+
+/* Hide Workspace Header instantly (prevents flicker on refresh) */
+.workspace-header,
+.workspace-header-container {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.workspace-body,
+.codex-editor,
+.codex-editor__redactor,
+.layout-main-section {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Permanently hide Save button on locked Customer forms */
+body.customer-locked-form .page-actions .btn-primary,
+body.customer-locked-form .page-actions .primary-action,
+body.customer-locked-form [data-label="Save"],
+body.customer-locked-form button.primary-action,
+body.customer-locked-form .standard-actions .btn-primary,
+body.customer-locked-form .standard-actions .primary-action,
+.customer-locked-form .page-actions .btn-primary,
+.customer-locked-form .page-actions .primary-action,
+.customer-locked-form [data-label="Save"],
+.customer-locked-form button.primary-action {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  pointer-events: none !important;
 }
 
 :root {

@@ -2603,6 +2603,17 @@ def check_customer_links(customer):
     return False
 
 @frappe.whitelist()
+def get_item_names(item_ids):
+    """Fetch item_name mapping for a list of Item IDs"""
+    if isinstance(item_ids, str):
+        item_ids = frappe.parse_json(item_ids)
+    if not item_ids:
+        return {}
+    
+    items = frappe.get_all("Item", filters={"name": ["in", item_ids]}, fields=["name", "item_name"])
+    return {d.name: d.item_name for d in items if d.item_name}
+
+@frappe.whitelist()
 def delete_customer_location(row_name):
     """Delete a Customer Location row after checking for Invoice links"""
     if not row_name:

@@ -1,20 +1,18 @@
 frappe.ui.form.on("Customer", {
-    refresh(frm) {
-        // if (!frm.is_new()) {
-        //     frm.page.add_inner_button(__("Refresh Old Status"), () => {
-        //         frappe.call({
-        //             method: "company.company.doctype.invoice.invoice.refresh_customer_status",
-        //             args: { customer: frm.doc.name },
-        //             callback: function(r) {
-        //                 if(r.message) {
-        //                     frappe.show_alert({message: __("Status Refreshed Successfully!"), indicator: "green"});
-        //                     frm.reload_doc();
-        //                 }
-        //             }
-        //         });
-        //     });
-        // }
+    setup(frm) {
+        frappe.realtime.on("customer_status_updated", (data) => {
+            if (frm.doc && frm.doc.name === data.customer) {
+                frm.reload_doc();
+            }
+        });
+        frappe.realtime.on("doc_update", (data) => {
+            if (data && data.doctype === "Customer" && frm.doc && frm.doc.name === data.name) {
+                frm.reload_doc();
+            }
+        });
+    },
 
+    refresh(frm) {
         frm.trigger("lock_based_on_links");
 
         // ✅ Default country only for new docs
@@ -32,11 +30,10 @@ frappe.ui.form.on("Customer", {
             load_cities(frm);
         }
 
-        // 🏷️ Status Indicator (Old/New) - Form View ONLY
-        if (!frm.is_new()) {
-            const label = frm.doc.is_old_customer ? __("Old") : __("New");
-            const color = frm.doc.is_old_customer ? "blue" : "green";
-            frm.page.set_indicator(label, color);
+        // 🏷️ Status Indicator (New Customer / Old Customer)
+        if (!frm.is_new() && frm.doc.customer_status) {
+            const color = frm.doc.customer_status === "Old Customer" ? "blue" : "green";
+            frm.page.set_indicator(__(frm.doc.customer_status), color);
         }
 
         frm.trigger("set_city_state");
@@ -104,13 +101,7 @@ frappe.ui.form.on("Customer", {
         );
     },
 
-    onload(frm) {
-        if (!frm.is_new()) {
-            const label = frm.doc.is_old_customer ? __("Old") : __("New");
-            const color = frm.doc.is_old_customer ? "blue" : "green";
-            frm.page.set_indicator(label, color);
-        }
-    },
+
 
     country(frm) {
         if (!frm.doc.country) return;
@@ -148,13 +139,19 @@ frappe.ui.form.on("Customer", {
                 let has_links = r.message || false;
 
                 if (has_links) {
+                    frm.set_read_only();
+                    frm.disable_save();
+                    frm.wrapper.addClass("customer-locked-form");
+                    frm.page.wrapper.addClass("customer-locked-form");
+                    $(".page-head, .page-actions, body").addClass("customer-locked-form");
 
                     // Disable all fields
-                    frm.fields.forEach(f => {
-                        if (f.df.fieldname) {
-                            frm.set_df_property(f.df.fieldname, "read_only", 1);
+                    frm.meta.fields.forEach(df => {
+                        if (df.fieldname) {
+                            frm.set_df_property(df.fieldname, "read_only", 1);
                         }
                     });
+                    frm.refresh_fields();
 
                     // Disable child tables
                     frm.meta.fields.forEach(df => {
@@ -169,7 +166,6 @@ frappe.ui.form.on("Customer", {
                                 field.grid.wrapper.find(".grid-add-row").hide();
                                 
                                 // Hide the Pencil icon (Edit) to ensure 'Delete Only' 
-                                // Modern Frappe uses .btn-open-row for the detail view button
                                 if (!$('#customer-locked-grid-css').length) {
                                     $(`<style id="customer-locked-grid-css">
                                         .locked-location-grid .btn-open-row { display: none !important; }
@@ -188,8 +184,18 @@ frappe.ui.form.on("Customer", {
                         }
                     });
 
-                    // Disable Save
+                    // Disable Save and hide Save button completely
                     frm.disable_save();
+                    frm.page.clear_primary_action();
+                    frm.page.wrapper.find(".primary-action, .btn-primary, [data-label='Save']").hide();
+
+                    let attempts = 0;
+                    let timer = setInterval(() => {
+                        attempts++;
+                        frm.page.clear_primary_action();
+                        frm.page.wrapper.find(".primary-action, .btn-primary, [data-label='Save']").hide();
+                        if (attempts > 5) clearInterval(timer);
+                    }, 100);
 
                     // Remove all menu items
                     frm.page.clear_menu();
@@ -202,16 +208,21 @@ frappe.ui.form.on("Customer", {
                     frm._alert_shown = true;
 
                 } else {
+                    frm.wrapper.removeClass("customer-locked-form");
+                    $("body").removeClass("customer-locked-form");
                     // Unlock when no links
-                    frm.fields.forEach(f => {
-                        if (f.df.fieldname) {
-                            frm.set_df_property(f.df.fieldname, "read_only", 0);
+                    frm.meta.fields.forEach(df => {
+                        if (df.fieldname) {
+                            frm.set_df_property(df.fieldname, "read_only", 0);
                         }
                     });
 
                     frm.trigger("set_city_state");
 
                     frm.enable_save();
+                    if (frm.page.btn_primary) {
+                        frm.page.btn_primary.show();
+                    }
                 }
             }
         });

@@ -7,6 +7,8 @@
  "field_order": [
   "section_break_zxuz",
   "business_person_name",
+  "column_break_azbu",
+  "lead",
   "customer_details_section",
   "customer_name",
   "company_name",
@@ -14,17 +16,16 @@
   "phone_number",
   "email",
   "customer_type",
-  "remarks",
+  "customer_status",
   "column_break_dgoa",
   "country",
   "state",
   "city",
   "billing_address",
-  "lead",
+  "remarks",
   "section_break_ngli",
   "location",
   "section_break_spsn",
-  "is_old_customer",
   "owner_name"
  ],
  "fields": [
@@ -87,6 +88,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "ID of the Lead from which this record was converted",
    "fieldname": "lead",
    "fieldtype": "Read Only",
    "label": "Lead ID",
@@ -99,6 +101,16 @@
    "label": "Customer Type",
    "options": "\nSales\nPurchase",
    "placeholder": "Select Customer Type",
+   "reqd": 1
+  },
+  {
+   "default": "New Customer",
+   "fieldname": "customer_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Customer Status",
+   "options": "\nNew Customer\nOld Customer",
+   "placeholder": "Select Customer Status",
    "reqd": 1
   },
   {
@@ -126,15 +138,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "default": "0",
-   "fieldname": "is_old_customer",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "in_standard_filter": 1,
-   "label": "Is Old Customer",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_zxuz",
    "fieldtype": "Section Break"
   },
@@ -154,12 +157,16 @@
    "fieldtype": "Table",
    "label": "Location",
    "options": "Customer Location"
+  },
+  {
+   "fieldname": "column_break_azbu",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-03 17:58:09.851258",
+ "modified": "2026-08-14 14:51:59.045925",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Customer",

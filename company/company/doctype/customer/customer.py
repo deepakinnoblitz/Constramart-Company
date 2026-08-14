@@ -25,3 +25,16 @@ class Customer(Document):
     def on_trash(self):
         if check_customer_links(self.name):
             frappe.throw("This Customer cannot be deleted because linked transactions exist.")
+
+
+@frappe.whitelist()
+def refresh_customer_status(customer):
+    if not customer:
+        return False
+    invoice_count = frappe.db.count("Invoice", filters={"customer_id": customer})
+    new_status = "Old Customer" if invoice_count >= 2 else "New Customer"
+    frappe.db.set_value("Customer", customer, "customer_status", new_status)
+    customer_doc = frappe.get_doc("Customer", customer)
+    customer_doc.notify_update()
+    frappe.publish_realtime("customer_status_updated", {"customer": customer, "status": new_status})
+    return new_status

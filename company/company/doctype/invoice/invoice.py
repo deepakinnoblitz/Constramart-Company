@@ -73,15 +73,18 @@ class Invoice(Document):
         if self.purchase_id:
             frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", None)
             
-        # Update Customer 'OLD' status when deleting invoice
+        # Update Customer status when deleting invoice
         if self.customer_id:
-            # Count remaining invoices (excluding this one)
             remaining_count = frappe.db.count("Invoice", filters={
                 "customer_id": self.customer_id,
                 "name": ["!=", self.name]
             })
             if remaining_count <= 1:
-                frappe.db.set_value("Customer", self.customer_id, "is_old_customer", 0)
+                frappe.db.set_value("Customer", self.customer_id, "customer_status", "New Customer")
+                customer_doc = frappe.get_doc("Customer", self.customer_id)
+                customer_doc.notify_update()
+                frappe.publish_realtime("customer_status_updated", {"customer": self.customer_id, "status": "New Customer"}, after_commit=True)
+                frappe.publish_realtime("doc_update", {"doctype": "Customer", "name": self.customer_id}, after_commit=True)
     
     def autoname(self):
         # Set name = ref_no
@@ -168,16 +171,16 @@ class Invoice(Document):
         # Update Purchase with Invoice reference
         if self.purchase_id:
             frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
-        
-        if not self.customer_id:
-            return
-
-        # Count confirmed invoices for this customer
-        invoice_count = frappe.db.count("Invoice", filters={"customer_id": self.customer_id})
-
-        # Update status (1 if more than one invoice, 0 otherwise)
-        is_old = 1 if invoice_count > 1 else 0
-        frappe.db.set_value("Customer", self.customer_id, "is_old_customer", is_old)
+            
+        # Update Customer status on 2nd invoice creation
+        if self.customer_id:
+            invoice_count = frappe.db.count("Invoice", filters={"customer_id": self.customer_id})
+            if invoice_count >= 2:
+                frappe.db.set_value("Customer", self.customer_id, "customer_status", "Old Customer")
+                customer_doc = frappe.get_doc("Customer", self.customer_id)
+                customer_doc.notify_update()
+                frappe.publish_realtime("customer_status_updated", {"customer": self.customer_id, "status": "Old Customer"}, after_commit=True)
+                frappe.publish_realtime("doc_update", {"doctype": "Customer", "name": self.customer_id}, after_commit=True)
 
 
 
@@ -217,18 +220,7 @@ def add_customer_location(customer, location_name, address=None):
     return False
 
 
-@frappe.whitelist()
-def refresh_customer_status(customer):
-    if not customer:
-        return False
-    
-    # Count confirmed invoices
-    invoice_count = frappe.db.count("Invoice", filters={"customer_id": customer})
-    
-    # Update status (1 if more than one invoice, 0 otherwise)
-    is_old = 1 if invoice_count > 1 else 0
-    frappe.db.set_value("Customer", customer, "is_old_customer", is_old)
-    return True
+
 
 
 @frappe.whitelist()

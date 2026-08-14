@@ -19,7 +19,7 @@ app_include_js = [
     "/assets/company/js/leave_allocation.js",
     "/assets/company/js/attendance_list.js",
     "/assets/company/js/wfh_attendance_list.js",
-    "/assets/company/js/firebase_init.js?v=1",
+    "/assets/company/js/firebase_init.js?v=2",
     "/assets/company/js/pwa_init.js?v=1",
     # "/assets/company/js/socket.io.min.js",
     # "/assets/company/js/socket_init.js",
@@ -48,7 +48,7 @@ app_include_js = [
     # "/assets/company/js/sales_pipeline.js",
 ]
 
-app_include_css = "/assets/company/css/custom.css?v=12"
+app_include_css = "/assets/company/css/custom.css?v=17"
 
 
 doc_events = {

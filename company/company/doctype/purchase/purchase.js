@@ -112,19 +112,38 @@ frappe.ui.form.on("Purchase", {
     },
     validate(frm) {
         // Validate Price > 0
-        (frm.doc.table_qecz || []).forEach(item => {
-            if (flt(item.price) <= 0) {
+        let invalid_items = (frm.doc.table_qecz || []).filter(item => flt(item.price) <= 0);
+        if (invalid_items.length > 0) {
+            frappe.validated = false;
+
+            let item_ids = invalid_items.map(i => i.service || i.items).filter(Boolean);
+            let item_map = {};
+            if (item_ids.length > 0) {
+                frappe.call({
+                    method: "company.company.api.get_item_names",
+                    args: { item_ids: item_ids },
+                    async: false,
+                    callback: function (r) {
+                        item_map = r.message || {};
+                    }
+                });
+            }
+
+            invalid_items.forEach(item => {
+                let code = item.service || item.items || "Unknown";
+                let name = item_map[code];
+                let display_name = name ? `${name} (${code})` : code;
+
                 frappe.msgprint({
                     title: __("Invalid Price"),
-                    message: __("Price cannot be 0 or less for item {0} in row {1}").format(
-                        "<b>" + (item.service || "Unknown") + "</b>", 
+                    message: __("Price cannot be 0 or less for item {0} in row {1}", [
+                        "<b>" + display_name + "</b>",
                         "<b>" + item.idx + "</b>"
-                    ),
+                    ]),
                     indicator: "red"
                 });
-                frappe.validated = false;
-            }
-        });
+            });
+        }
     },
     table_qecz_remove(frm) {
         setTimeout(() => {
