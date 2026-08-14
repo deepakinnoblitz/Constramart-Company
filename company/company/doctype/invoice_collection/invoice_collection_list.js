@@ -91,10 +91,10 @@ function setup_sales_collection_date_filters(listview) {
     let $container = $(`
         <div id="sales-collection-date-filters-wrapper" class="d-flex align-items-center" style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px;">
             <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="sales_coll_from_date_input" class="form-control input-xs" placeholder="${__('Collection From Date')}" readonly style="background-color: #fff; cursor: pointer;">
+                <input type="text" id="sales_coll_from_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Collection From Date')}" readonly style="cursor: pointer;">
             </div>
             <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="sales_coll_to_date_input" class="form-control input-xs" placeholder="${__('Collection To Date')}" readonly style="background-color: #fff; cursor: pointer;">
+                <input type="text" id="sales_coll_to_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Collection To Date')}" readonly style="cursor: pointer;">
             </div>
         </div>
     `);
@@ -124,7 +124,7 @@ function setup_sales_collection_date_filters(listview) {
         }
     });
 
-    $container.find('input').on('change clear input', function() {
+    $container.find('input').on('change clear input', function () {
         apply_sales_collection_date_filter(listview);
     });
 }
