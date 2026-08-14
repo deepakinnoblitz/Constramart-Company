@@ -2683,3 +2683,506 @@ def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
         ORDER BY creation DESC
         LIMIT %s, %s
     """, (link_search, link_search, start, page_len))
+
+
+@frappe.whitelist()
+def export_sales_itemized_excel(filters=None, names=None):
+    """
+    Exports Sales List (Invoice) records along with Item Details (Item Name, Qty, Rate, Amount).
+    If names is provided (list of selected Invoice IDs), exports only those selected records.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("inv.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("inv.invoice_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("inv.invoice_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("inv.invoice_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("customer_id"):
+            conditions.append("inv.customer_id = %(customer_id)s")
+            values["customer_id"] = filters.get("customer_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    query = f"""
+        SELECT 
+            inv.name as ref_no,
+            COALESCE(bp.business_person_name, inv.business_person_name, '') as business_person_name,
+            inv.customer_id,
+            inv.customer_name,
+            inv.location,
+            inv.billing_name,
+            inv.invoice_date,
+            inv.po_no as dc_no,
+            inv.payment_terms,
+            inv.po_date as dc_date,
+            inv.due_date,
+            inv.company_name,
+            COALESCE(item.item_name, item_tb.service, '') as item_name,
+            COALESCE(item_tb.quantity, 0) as quantity,
+            COALESCE(item_tb.price, 0) as price,
+            COALESCE(item_tb.discount_type, '') as item_discount_type,
+            COALESCE(item_tb.discount, 0) as item_discount,
+            COALESCE(item_tb.tax_type, '') as item_tax_type,
+            COALESCE(item_tb.tax_amount, 0) as item_tax_amount,
+            COALESCE(item_tb.sub_total, 0) as sub_total,
+            COALESCE(inv.total_amount, 0) as total_amount,
+            COALESCE(inv.total_qty, 0) as total_qty,
+            COALESCE(inv.overall_discount_type, '') as overall_discount_type,
+            COALESCE(inv.overall_discount, 0) as overall_discount,
+            COALESCE(inv.grand_total, 0) as grand_total,
+            COALESCE(inv.received_amount, 0) as received_amount,
+            COALESCE(inv.balance_amount, 0) as balance_amount
+        FROM `tabInvoice` inv
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = inv.business_person_name
+        LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
+        LEFT JOIN `tabItem` item ON item.name = item_tb.service
+        {where_clause}
+        ORDER BY inv.invoice_date DESC, inv.name DESC
+    """
+
+    rows = frappe.db.sql(query, values, as_dict=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sales Report"
+
+    headers = [
+        "S.No",
+        "Invoice ID",
+        "Business Person",
+        "Customer ID",
+        "Customer Name",
+        "Location",
+        "Billing Name",
+        "Invoice Date",
+        "DC No",
+        "Payment Terms",
+        "DC Date",
+        "Due Date",
+        "Company Name",
+        "Item Name",
+        "Quantity (Qty)",
+        "Price (Rate)",
+        "Discount Type",
+        "Discount",
+        "Tax Type",
+        "Tax Amount",
+        "Sub Total",
+        "Total Amount",
+        "Total Quantity",
+        "Overall Discount Type",
+        "Overall Discount",
+        "Grand Total",
+        "Received Amount",
+        "Balance Amount"
+    ]
+
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    ws.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    # Group rows by invoice
+    invoice_groups = {}
+    for row in rows:
+        ref_no = row.ref_no or ""
+        if ref_no not in invoice_groups:
+            invoice_groups[ref_no] = []
+        invoice_groups[ref_no].append(row)
+
+    current_row = 2
+    for s_no, (ref_no, items) in enumerate(invoice_groups.items(), start=1):
+        start_row = current_row
+        for item_idx, row in enumerate(items):
+            ws.append([
+                s_no,
+                ref_no,
+                row.business_person_name or "",
+                row.customer_id or "",
+                row.customer_name or "",
+                row.location or "",
+                row.billing_name or "",
+                str(row.invoice_date) if row.invoice_date else "",
+                row.dc_no or "",
+                row.payment_terms or "",
+                str(row.dc_date) if row.dc_date else "",
+                str(row.due_date) if row.due_date else "",
+                row.company_name or "",
+                row.item_name or "",
+                float(row.quantity or 0),
+                float(row.price or 0),
+                row.item_discount_type or "",
+                float(row.item_discount or 0),
+                row.item_tax_type or "",
+                float(row.item_tax_amount or 0),
+                float(row.sub_total or 0),
+                float(row.total_amount or 0),
+                float(row.total_qty or 0),
+                row.overall_discount_type or "",
+                float(row.overall_discount or 0),
+                float(row.grand_total or 0),
+                float(row.received_amount or 0),
+                float(row.balance_amount or 0)
+            ])
+
+            r_num = current_row
+            ws.cell(row=r_num, column=1).alignment = center_align
+            ws.cell(row=r_num, column=2).alignment = left_align
+            ws.cell(row=r_num, column=3).alignment = left_align
+            ws.cell(row=r_num, column=4).alignment = left_align
+            ws.cell(row=r_num, column=5).alignment = left_align
+            ws.cell(row=r_num, column=6).alignment = left_align
+            ws.cell(row=r_num, column=7).alignment = left_align
+            ws.cell(row=r_num, column=8).alignment = center_align
+            ws.cell(row=r_num, column=9).alignment = left_align
+            ws.cell(row=r_num, column=10).alignment = left_align
+            ws.cell(row=r_num, column=11).alignment = center_align
+            ws.cell(row=r_num, column=12).alignment = center_align
+            ws.cell(row=r_num, column=13).alignment = left_align
+            ws.cell(row=r_num, column=14).alignment = left_align
+            ws.cell(row=r_num, column=15).alignment = right_align
+            ws.cell(row=r_num, column=16).alignment = right_align
+            ws.cell(row=r_num, column=17).alignment = center_align
+            ws.cell(row=r_num, column=18).alignment = right_align
+            ws.cell(row=r_num, column=19).alignment = left_align
+            ws.cell(row=r_num, column=20).alignment = right_align
+            ws.cell(row=r_num, column=21).alignment = right_align
+            ws.cell(row=r_num, column=22).alignment = right_align
+            ws.cell(row=r_num, column=23).alignment = right_align
+            ws.cell(row=r_num, column=24).alignment = center_align
+            ws.cell(row=r_num, column=25).alignment = right_align
+            ws.cell(row=r_num, column=26).alignment = right_align
+            ws.cell(row=r_num, column=27).alignment = right_align
+            ws.cell(row=r_num, column=28).alignment = right_align
+
+            ws.cell(row=r_num, column=15).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=16).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=18).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=20).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=21).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=22).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=23).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=25).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=26).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=27).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=28).number_format = "₹#,##0.00"
+
+            for c_num in range(1, len(headers) + 1):
+                ws.cell(row=r_num, column=c_num).border = thin_border
+
+            current_row += 1
+
+        end_row = current_row - 1
+        # Merge invoice level columns vertically if invoice has multiple items
+        if end_row > start_row:
+            invoice_level_cols = list(range(1, 14)) + list(range(22, 29))
+            for col_idx in invoice_level_cols:
+                ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
+
+        # Apply darker bottom border at the end of each invoice block
+        thick_bottom = Side(style='medium', color='000000')
+        black_side = Side(style='thin', color='000000')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=end_row, column=col_idx)
+            cell.border = Border(
+                left=cell.border.left if cell.border else black_side,
+                right=cell.border.right if cell.border else black_side,
+                top=cell.border.top if cell.border else black_side,
+                bottom=thick_bottom
+            )
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    import io
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    frappe.response['filename'] = 'Sales_Item_Details_Report.xlsx'
+    frappe.response['filecontent'] = output.getvalue()
+    frappe.response['type'] = 'binary'
+
+
+@frappe.whitelist()
+def export_purchase_itemized_excel(filters=None, names=None):
+    """
+    Exports Purchase List (Purchase) records along with Vendor Details, Purchase Details, Item Details, and Amount Details.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("pur.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("pur.bill_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("pur.bill_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("vendor_id"):
+            conditions.append("pur.vendor_id = %(vendor_id)s")
+            values["vendor_id"] = filters.get("vendor_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    query = f"""
+        SELECT 
+            pur.name as ref_no,
+            COALESCE(bp.business_person_name, pur.business_person_name, '') as business_person_name,
+            pur.vendor_id,
+            pur.vendor_name,
+            pur.bill_no,
+            pur.bill_date,
+            pur.payment_terms,
+            pur.due_date,
+            pur.purchase_status,
+            COALESCE(item.item_name, item_tb.service, '') as item_name,
+            COALESCE(item_tb.quantity, 0) as quantity,
+            COALESCE(item_tb.price, 0) as price,
+            COALESCE(item_tb.discount_type, '') as item_discount_type,
+            COALESCE(item_tb.discount, 0) as item_discount,
+            COALESCE(item_tb.tax_type, '') as item_tax_type,
+            COALESCE(item_tb.tax_amount, 0) as item_tax_amount,
+            COALESCE(item_tb.sub_total, 0) as sub_total,
+            COALESCE(pur.total_amount, 0) as total_amount,
+            COALESCE(pur.total_qty, 0) as total_qty,
+            COALESCE(pur.overall_discount_type, '') as overall_discount_type,
+            COALESCE(pur.overall_discount, 0) as overall_discount,
+            COALESCE(pur.grand_total, 0) as grand_total,
+            COALESCE(pur.paid_amount, 0) as paid_amount,
+            COALESCE(pur.balance_amount, 0) as balance_amount
+        FROM `tabPurchase` pur
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = pur.business_person_name
+        LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
+        LEFT JOIN `tabItem` item ON item.name = item_tb.service
+        {where_clause}
+        ORDER BY pur.bill_date DESC, pur.name DESC
+    """
+
+    rows = frappe.db.sql(query, values, as_dict=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Purchase Report"
+
+    headers = [
+        "S.No",
+        "Purchase ID",
+        "Business Person",
+        "Vendor ID",
+        "Vendor Name",
+        "Bill No",
+        "Bill Date",
+        "Payment Terms",
+        "Due Date",
+        "Purchase Status",
+        "Item Name",
+        "Quantity (Qty)",
+        "Price (Rate)",
+        "Discount Type",
+        "Discount",
+        "Tax Type",
+        "Tax Amount",
+        "Sub Total",
+        "Total Amount",
+        "Total Quantity",
+        "Overall Discount Type",
+        "Overall Discount",
+        "Grand Total",
+        "Paid Amount",
+        "Balance Amount"
+    ]
+
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    ws.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    # Group rows by purchase
+    purchase_groups = {}
+    for row in rows:
+        ref_no = row.ref_no or ""
+        if ref_no not in purchase_groups:
+            purchase_groups[ref_no] = []
+        purchase_groups[ref_no].append(row)
+
+    current_row = 2
+    for s_no, (ref_no, items) in enumerate(purchase_groups.items(), start=1):
+        start_row = current_row
+        for item_idx, row in enumerate(items):
+            ws.append([
+                s_no,
+                ref_no,
+                row.business_person_name or "",
+                row.vendor_id or "",
+                row.vendor_name or "",
+                row.bill_no or "",
+                str(row.bill_date) if row.bill_date else "",
+                row.payment_terms or "",
+                str(row.due_date) if row.due_date else "",
+                row.purchase_status or "",
+                row.item_name or "",
+                float(row.quantity or 0),
+                float(row.price or 0),
+                row.item_discount_type or "",
+                float(row.item_discount or 0),
+                row.item_tax_type or "",
+                float(row.item_tax_amount or 0),
+                float(row.sub_total or 0),
+                float(row.total_amount or 0),
+                float(row.total_qty or 0),
+                row.overall_discount_type or "",
+                float(row.overall_discount or 0),
+                float(row.grand_total or 0),
+                float(row.paid_amount or 0),
+                float(row.balance_amount or 0)
+            ])
+
+            r_num = current_row
+            ws.cell(row=r_num, column=1).alignment = center_align
+            ws.cell(row=r_num, column=2).alignment = left_align
+            ws.cell(row=r_num, column=3).alignment = left_align
+            ws.cell(row=r_num, column=4).alignment = left_align
+            ws.cell(row=r_num, column=5).alignment = left_align
+            ws.cell(row=r_num, column=6).alignment = left_align
+            ws.cell(row=r_num, column=7).alignment = center_align
+            ws.cell(row=r_num, column=8).alignment = left_align
+            ws.cell(row=r_num, column=9).alignment = center_align
+            ws.cell(row=r_num, column=10).alignment = center_align
+            ws.cell(row=r_num, column=11).alignment = left_align
+            ws.cell(row=r_num, column=12).alignment = right_align
+            ws.cell(row=r_num, column=13).alignment = right_align
+            ws.cell(row=r_num, column=14).alignment = center_align
+            ws.cell(row=r_num, column=15).alignment = right_align
+            ws.cell(row=r_num, column=16).alignment = left_align
+            ws.cell(row=r_num, column=17).alignment = right_align
+            ws.cell(row=r_num, column=18).alignment = right_align
+            ws.cell(row=r_num, column=19).alignment = right_align
+            ws.cell(row=r_num, column=20).alignment = right_align
+            ws.cell(row=r_num, column=21).alignment = center_align
+            ws.cell(row=r_num, column=22).alignment = right_align
+            ws.cell(row=r_num, column=23).alignment = right_align
+            ws.cell(row=r_num, column=24).alignment = right_align
+            ws.cell(row=r_num, column=25).alignment = right_align
+
+            ws.cell(row=r_num, column=12).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=13).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=15).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=17).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=18).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=19).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=20).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=22).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=23).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=24).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=25).number_format = "₹#,##0.00"
+
+            for c_num in range(1, len(headers) + 1):
+                ws.cell(row=r_num, column=c_num).border = thin_border
+
+            current_row += 1
+
+        end_row = current_row - 1
+        # Merge purchase level columns vertically if purchase has multiple items
+        if end_row > start_row:
+            purchase_level_cols = list(range(1, 11)) + list(range(19, 26))
+            for col_idx in purchase_level_cols:
+                ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
+
+        # Apply darker bottom border at the end of each purchase block
+        thick_bottom = Side(style='medium', color='000000')
+        black_side = Side(style='thin', color='000000')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=end_row, column=col_idx)
+            cell.border = Border(
+                left=cell.border.left if cell.border else black_side,
+                right=cell.border.right if cell.border else black_side,
+                top=cell.border.top if cell.border else black_side,
+                bottom=thick_bottom
+            )
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    import io
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    frappe.response['filename'] = 'Purchase_Item_Details_Report.xlsx'
+    frappe.response['filecontent'] = output.getvalue()
+    frappe.response['type'] = 'binary'

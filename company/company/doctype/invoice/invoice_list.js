@@ -44,6 +44,27 @@ frappe.listview_settings['Invoice'] = {
         setTimeout(() => {
             setup_sales_date_filters(listview);
         }, 200);
+
+        // Add Export Item Details button under Actions menu
+        listview.page.add_inner_button(__('Export Invoice Details'), function () {
+            let selected_items = listview.get_checked_items();
+            let selected_names = selected_items ? selected_items.map(item => item.name) : [];
+
+            let from_date = $('#sales_from_date_input').val() ? frappe.datetime.user_to_str($('#sales_from_date_input').val()) : null;
+            let to_date = $('#sales_to_date_input').val() ? frappe.datetime.user_to_str($('#sales_to_date_input').val()) : null;
+            let customer_id = listview.page.fields_dict['customer_id'] ? listview.page.fields_dict['customer_id'].get_value() : null;
+
+            let filters = {
+                from_date: from_date,
+                to_date: to_date,
+                customer_id: customer_id
+            };
+
+            open_url_post('/api/method/company.company.api.export_sales_itemized_excel', {
+                filters: JSON.stringify(filters),
+                names: JSON.stringify(selected_names)
+            });
+        });
     },
     get_query: function (fieldname) {
         if (fieldname === 'customer_id') {

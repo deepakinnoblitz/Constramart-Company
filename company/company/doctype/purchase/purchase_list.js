@@ -44,6 +44,27 @@ frappe.listview_settings['Purchase'] = {
         setTimeout(() => {
             setup_purchase_date_filters(listview);
         }, 200);
+
+        // Add Export Item Details button under Actions menu
+        listview.page.add_inner_button(__('Export Purchase Details'), function () {
+            let selected_items = listview.get_checked_items();
+            let selected_names = selected_items ? selected_items.map(item => item.name) : [];
+
+            let from_date = $('#purchase_from_date_input').val() ? frappe.datetime.user_to_str($('#purchase_from_date_input').val()) : null;
+            let to_date = $('#purchase_to_date_input').val() ? frappe.datetime.user_to_str($('#purchase_to_date_input').val()) : null;
+            let vendor_id = listview.page.fields_dict['vendor_id'] ? listview.page.fields_dict['vendor_id'].get_value() : null;
+
+            let filters = {
+                from_date: from_date,
+                to_date: to_date,
+                vendor_id: vendor_id
+            };
+
+            open_url_post('/api/method/company.company.api.export_purchase_itemized_excel', {
+                filters: JSON.stringify(filters),
+                names: JSON.stringify(selected_names)
+            });
+        });
     },
     get_query: function (fieldname) {
         if (fieldname === 'vendor_id') {
