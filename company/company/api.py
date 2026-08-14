@@ -2827,35 +2827,50 @@ def export_sales_itemized_excel(filters=None, names=None):
             invoice_groups[ref_no] = []
         invoice_groups[ref_no].append(row)
 
+    def format_excel_date(d_val):
+        if not d_val:
+            return "-"
+        try:
+            if isinstance(d_val, str):
+                d_val = getdate(d_val)
+            return d_val.strftime("%d-%m-%Y")
+        except Exception:
+            return str(d_val) if d_val else "-"
+
+    def format_excel_str(val):
+        if val is None or val == "" or str(val).strip() == "":
+            return "-"
+        return str(val).strip()
+
     current_row = 2
     for s_no, (ref_no, items) in enumerate(invoice_groups.items(), start=1):
         start_row = current_row
         for item_idx, row in enumerate(items):
             ws.append([
                 s_no,
-                ref_no,
-                row.business_person_name or "",
-                row.customer_id or "",
-                row.customer_name or "",
-                row.location or "",
-                row.billing_name or "",
-                str(row.invoice_date) if row.invoice_date else "",
-                row.dc_no or "",
-                row.payment_terms or "",
-                str(row.dc_date) if row.dc_date else "",
-                str(row.due_date) if row.due_date else "",
-                row.company_name or "",
-                row.item_name or "",
+                format_excel_str(ref_no),
+                format_excel_str(row.business_person_name),
+                format_excel_str(row.customer_id),
+                format_excel_str(row.customer_name),
+                format_excel_str(row.location),
+                format_excel_str(row.billing_name),
+                format_excel_date(row.invoice_date),
+                format_excel_str(row.dc_no),
+                format_excel_str(row.payment_terms),
+                format_excel_date(row.dc_date),
+                format_excel_date(row.due_date),
+                format_excel_str(row.company_name),
+                format_excel_str(row.item_name),
                 float(row.quantity or 0),
                 float(row.price or 0),
-                row.item_discount_type or "",
+                format_excel_str(row.item_discount_type),
                 float(row.item_discount or 0),
-                row.item_tax_type or "",
+                format_excel_str(row.item_tax_type),
                 float(row.item_tax_amount or 0),
                 float(row.sub_total or 0),
                 float(row.total_amount or 0),
                 float(row.total_qty or 0),
-                row.overall_discount_type or "",
+                format_excel_str(row.overall_discount_type),
                 float(row.overall_discount or 0),
                 float(row.grand_total or 0),
                 float(row.received_amount or 0),
@@ -2905,7 +2920,10 @@ def export_sales_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=28).number_format = "₹#,##0.00"
 
             for c_num in range(1, len(headers) + 1):
-                ws.cell(row=r_num, column=c_num).border = thin_border
+                cell = ws.cell(row=r_num, column=c_num)
+                cell.border = thin_border
+                if str(cell.value or "").strip() == "-":
+                    cell.alignment = center_align
 
             current_row += 1
 
@@ -3078,32 +3096,47 @@ def export_purchase_itemized_excel(filters=None, names=None):
             purchase_groups[ref_no] = []
         purchase_groups[ref_no].append(row)
 
+    def format_excel_date(d_val):
+        if not d_val:
+            return "-"
+        try:
+            if isinstance(d_val, str):
+                d_val = getdate(d_val)
+            return d_val.strftime("%d-%m-%Y")
+        except Exception:
+            return str(d_val) if d_val else "-"
+
+    def format_excel_str(val):
+        if val is None or val == "" or str(val).strip() == "":
+            return "-"
+        return str(val).strip()
+
     current_row = 2
     for s_no, (ref_no, items) in enumerate(purchase_groups.items(), start=1):
         start_row = current_row
         for item_idx, row in enumerate(items):
             ws.append([
                 s_no,
-                ref_no,
-                row.business_person_name or "",
-                row.vendor_id or "",
-                row.vendor_name or "",
-                row.bill_no or "",
-                str(row.bill_date) if row.bill_date else "",
-                row.payment_terms or "",
-                str(row.due_date) if row.due_date else "",
-                row.purchase_status or "",
-                row.item_name or "",
+                format_excel_str(ref_no),
+                format_excel_str(row.business_person_name),
+                format_excel_str(row.vendor_id),
+                format_excel_str(row.vendor_name),
+                format_excel_str(row.bill_no),
+                format_excel_date(row.bill_date),
+                format_excel_str(row.payment_terms),
+                format_excel_date(row.due_date),
+                format_excel_str(row.purchase_status),
+                format_excel_str(row.item_name),
                 float(row.quantity or 0),
                 float(row.price or 0),
-                row.item_discount_type or "",
+                format_excel_str(row.item_discount_type),
                 float(row.item_discount or 0),
-                row.item_tax_type or "",
+                format_excel_str(row.item_tax_type),
                 float(row.item_tax_amount or 0),
                 float(row.sub_total or 0),
                 float(row.total_amount or 0),
                 float(row.total_qty or 0),
-                row.overall_discount_type or "",
+                format_excel_str(row.overall_discount_type),
                 float(row.overall_discount or 0),
                 float(row.grand_total or 0),
                 float(row.paid_amount or 0),
@@ -3150,7 +3183,10 @@ def export_purchase_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=25).number_format = "₹#,##0.00"
 
             for c_num in range(1, len(headers) + 1):
-                ws.cell(row=r_num, column=c_num).border = thin_border
+                cell = ws.cell(row=r_num, column=c_num)
+                cell.border = thin_border
+                if str(cell.value or "").strip() == "-":
+                    cell.alignment = center_align
 
             current_row += 1
 
