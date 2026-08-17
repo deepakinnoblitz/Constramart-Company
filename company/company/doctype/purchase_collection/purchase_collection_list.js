@@ -83,26 +83,27 @@ frappe.listview_settings['Purchase Collection'] = {
 };
 
 function setup_purchase_collection_date_filters(listview) {
-    if ($('#purchase-collection-date-filters-wrapper').length) return;
+    if ($('#purchase_coll_from_date_input').length) return;
 
     let $filter_section = listview.page.wrapper.find('.standard-filter-section');
     if (!$filter_section.length) return;
 
-    let $container = $(`
-        <div id="purchase-collection-date-filters-wrapper" class="d-flex align-items-center" style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px;">
-            <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="purchase_coll_from_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Payment From Date')}" readonly style="cursor: pointer;">
-            </div>
-            <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="purchase_coll_to_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Payment To Date')}" readonly style="cursor: pointer;">
-            </div>
+    let $from_wrap = $(`
+        <div class="form-group frappe-control input-max-width" style="margin-bottom: 0;">
+            <input type="text" id="purchase_coll_from_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Payment From Date')}" readonly style="cursor: pointer;">
         </div>
     `);
 
-    $filter_section.append($container);
+    let $to_wrap = $(`
+        <div class="form-group frappe-control input-max-width" style="margin-bottom: 0;">
+            <input type="text" id="purchase_coll_to_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Payment To Date')}" readonly style="cursor: pointer;">
+        </div>
+    `);
 
-    let $from = $container.find('#purchase_coll_from_date_input');
-    let $to = $container.find('#purchase_coll_to_date_input');
+    $filter_section.append($from_wrap).append($to_wrap);
+
+    let $from = $from_wrap.find('#purchase_coll_from_date_input');
+    let $to = $to_wrap.find('#purchase_coll_to_date_input');
 
     let date_format = (frappe.boot && frappe.boot.sysdefaults && frappe.boot.sysdefaults.date_format) || 'yyyy-mm-dd';
 
@@ -124,7 +125,7 @@ function setup_purchase_collection_date_filters(listview) {
         }
     });
 
-    $container.find('input').on('change clear input', function () {
+    $from_wrap.add($to_wrap).find('input').on('change clear input', function () {
         apply_purchase_collection_date_filter(listview);
     });
 }

@@ -2686,6 +2686,96 @@ def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
 
 
 @frappe.whitelist()
+def get_sales_export_count(filters=None, names=None):
+    """Returns invoice count and item count for confirmation dialog before export."""
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("inv.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("inv.invoice_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("inv.invoice_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("inv.invoice_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("customer_id"):
+            conditions.append("inv.customer_id = %(customer_id)s")
+            values["customer_id"] = filters.get("customer_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    res = frappe.db.sql(f"""
+        SELECT COUNT(DISTINCT inv.name) as invoice_count, COUNT(item_tb.name) as item_count
+        FROM `tabInvoice` inv
+        LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
+        {where_clause}
+    """, values, as_dict=True)
+
+    return {
+        "invoice_count": res[0].invoice_count if res else 0,
+        "item_count": res[0].item_count if res else 0
+    }
+
+
+@frappe.whitelist()
+def get_purchase_export_count(filters=None, names=None):
+    """Returns purchase count and item count for confirmation dialog before export."""
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("pur.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("pur.bill_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("pur.bill_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("vendor_id"):
+            conditions.append("pur.vendor_id = %(vendor_id)s")
+            values["vendor_id"] = filters.get("vendor_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    res = frappe.db.sql(f"""
+        SELECT COUNT(DISTINCT pur.name) as purchase_count, COUNT(item_tb.name) as item_count
+        FROM `tabPurchase` pur
+        LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
+        {where_clause}
+    """, values, as_dict=True)
+
+    return {
+        "purchase_count": res[0].purchase_count if res else 0,
+        "item_count": res[0].item_count if res else 0
+    }
+
+
+@frappe.whitelist()
 def export_sales_itemized_excel(filters=None, names=None):
     """
     Exports Sales List (Invoice) records along with Item Details (Item Name, Qty, Rate, Amount).

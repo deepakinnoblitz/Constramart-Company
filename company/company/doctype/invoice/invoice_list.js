@@ -26,7 +26,42 @@ frappe.listview_settings['Invoice'] = {
             }, 100);
         });
 
-        // Patch listview refresh to auto-clear date inputs when invoice_date filter is removed
+        // Setup multi-page checkbox selection persistence
+        if (!listview._selection_tracker_setup) {
+            listview._selected_names = new Set();
+
+            listview.$page.on('change', '.list-row-checkbox', function () {
+                let name = $(this).attr('data-name');
+                if (!name) {
+                    name = $(this).closest('.list-row-container, .list-row').attr('data-name');
+                }
+                if (name) {
+                    if (this.checked) {
+                        listview._selected_names.add(name);
+                    } else {
+                        listview._selected_names.delete(name);
+                    }
+                }
+            });
+
+            listview.$page.on('change', '.list-check-all', function () {
+                let is_checked = this.checked;
+                listview.$page.find('.list-row-checkbox').each(function () {
+                    let name = $(this).attr('data-name') || $(this).closest('.list-row-container, .list-row').attr('data-name');
+                    if (name) {
+                        if (is_checked) {
+                            listview._selected_names.add(name);
+                        } else {
+                            listview._selected_names.delete(name);
+                        }
+                    }
+                });
+            });
+
+            listview._selection_tracker_setup = true;
+        }
+
+        // Patch listview refresh to auto-clear date inputs when invoice_date filter is removed and restore checked state
         if (!listview._date_refresh_patched) {
             let original_refresh = listview.refresh.bind(listview);
             listview.refresh = function () {
@@ -35,7 +70,18 @@ frappe.listview_settings['Invoice'] = {
                     $('#sales_from_date_input').val('');
                     $('#sales_to_date_input').val('');
                 }
-                return original_refresh();
+                let p = original_refresh();
+                setTimeout(() => {
+                    if (listview._selected_names && listview._selected_names.size) {
+                        listview.$page.find('.list-row-checkbox').each(function () {
+                            let name = $(this).attr('data-name') || $(this).closest('.list-row-container, .list-row').attr('data-name');
+                            if (name && listview._selected_names.has(name)) {
+                                $(this).prop('checked', true);
+                            }
+                        });
+                    }
+                }, 300);
+                return p;
             };
             listview._date_refresh_patched = true;
         }
@@ -45,10 +91,12 @@ frappe.listview_settings['Invoice'] = {
             setup_sales_date_filters(listview);
         }, 200);
 
-        // Add Export Item Details button under Actions menu
+        // Add Export Invoice Details button under Actions menu
         listview.page.add_inner_button(__('Export Invoice Details'), function () {
-            let selected_items = listview.get_checked_items();
-            let selected_names = selected_items ? selected_items.map(item => item.name) : [];
+            let current_checked = listview.get_checked_items().map(item => item.name);
+            let combined_set = new Set(listview._selected_names || []);
+            current_checked.forEach(n => combined_set.add(n));
+            let selected_names = Array.from(combined_set);
 
             let from_date = $('#sales_from_date_input').val() ? frappe.datetime.user_to_str($('#sales_from_date_input').val()) : null;
             let to_date = $('#sales_to_date_input').val() ? frappe.datetime.user_to_str($('#sales_to_date_input').val()) : null;
@@ -60,9 +108,62 @@ frappe.listview_settings['Invoice'] = {
                 customer_id: customer_id
             };
 
-            open_url_post('/api/method/company.company.api.export_sales_itemized_excel', {
-                filters: JSON.stringify(filters),
-                names: JSON.stringify(selected_names)
+            frappe.call({
+                method: 'company.company.api.get_sales_export_count',
+                args: {
+                    filters: JSON.stringify(filters),
+                    names: JSON.stringify(selected_names)
+                },
+                callback: function (r) {
+                    let counts = r.message || { invoice_count: 0, item_count: 0 };
+                    let inv_count = counts.invoice_count || 0;
+                    let item_count = counts.item_count || 0;
+
+                    if (inv_count === 0) {
+                        frappe.msgprint({
+                            title: __('No Invoices Found'),
+                            message: __('There are no invoices matching the selected filters to export.'),
+                            indicator: 'orange'
+                        });
+                        return;
+                    }
+
+                    frappe.confirm(
+                        __('Are you sure you want to download <b>{0} Invoice(s)</b> to Excel?', [inv_count]),
+                        function () {
+                            frappe.freeze(__('Generating Excel Report, please wait...'));
+
+                            fetch('/api/method/company.company.api.export_sales_itemized_excel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                                },
+                                body: $.param({
+                                    filters: JSON.stringify(filters),
+                                    names: JSON.stringify(selected_names)
+                                })
+                            })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                frappe.unfreeze();
+                                let url = window.URL.createObjectURL(blob);
+                                let a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Sales_Item_Details_Report.xlsx';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                                frappe.show_alert({ message: __('Excel Report downloaded successfully!'), indicator: 'green' });
+                            })
+                            .catch(err => {
+                                frappe.unfreeze();
+                                frappe.msgprint(__('Failed to generate Excel report. Please try again.'));
+                            });
+                        }
+                    );
+                }
             });
         });
     },
@@ -78,26 +179,27 @@ frappe.listview_settings['Invoice'] = {
 };
 
 function setup_sales_date_filters(listview) {
-    if ($('#sales-date-filters-wrapper').length) return;
+    if ($('#sales_from_date_input').length) return;
 
     let $filter_section = listview.page.wrapper.find('.standard-filter-section');
     if (!$filter_section.length) return;
 
-    let $container = $(`
-        <div id="sales-date-filters-wrapper" class="d-flex align-items-center" style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px;">
-            <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="sales_from_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Invoice From Date')}" readonly style="cursor: pointer;">
-            </div>
-            <div class="frappe-control input-max-width" style="width: 145px; margin: 0;">
-                <input type="text" id="sales_to_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Invoice To Date')}" readonly style="cursor: pointer;">
-            </div>
+    let $from_wrap = $(`
+        <div class="form-group frappe-control input-max-width" style="margin-bottom: 0;">
+            <input type="text" id="sales_from_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Invoice From Date')}" readonly style="cursor: pointer;">
         </div>
     `);
 
-    $filter_section.append($container);
+    let $to_wrap = $(`
+        <div class="form-group frappe-control input-max-width" style="margin-bottom: 0;">
+            <input type="text" id="sales_to_date_input" class="input-with-feedback form-control input-xs" placeholder="${__('Invoice To Date')}" readonly style="cursor: pointer;">
+        </div>
+    `);
 
-    let $from = $container.find('#sales_from_date_input');
-    let $to = $container.find('#sales_to_date_input');
+    $filter_section.append($from_wrap).append($to_wrap);
+
+    let $from = $from_wrap.find('#sales_from_date_input');
+    let $to = $to_wrap.find('#sales_to_date_input');
 
     let date_format = (frappe.boot && frappe.boot.sysdefaults && frappe.boot.sysdefaults.date_format) || 'yyyy-mm-dd';
 
@@ -119,7 +221,7 @@ function setup_sales_date_filters(listview) {
         }
     });
 
-    $container.find('input').on('change clear input', function () {
+    $from_wrap.add($to_wrap).find('input').on('change clear input', function () {
         apply_sales_date_filter(listview);
     });
 }
