@@ -241,7 +241,7 @@ body.customer-locked-form .standard-actions .primary-action,
 }
 
 .level-item {
-  color: #1e2f40 !important;
+  color: #ffffff !important;
 }
 
 .list-row-col {
@@ -2166,7 +2166,7 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   justify-content: center;
 
   background: #ffffff;
-  border: 1px solid #4646463b !important;
+  border: 1px solid #46464614 !important;
   border-radius: 16px;
 
   padding: 20px 20px 20px 84px;
