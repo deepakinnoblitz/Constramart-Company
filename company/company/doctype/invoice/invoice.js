@@ -165,6 +165,11 @@ frappe.ui.form.on("Invoice", {
     converted_from_estimation(frm) {
         toggle_conversion_section(frm);
     },
+    advance_amount_paid(frm) {
+        if (window.calculate_totals_live) {
+            window.calculate_totals_live(frm);
+        }
+    },
     client_name(frm) {
         if (!frm.doc.client_name) return;
 

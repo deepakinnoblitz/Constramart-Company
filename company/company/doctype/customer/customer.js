@@ -38,6 +38,16 @@ frappe.ui.form.on("Customer", {
 
         frm.trigger("set_city_state");
         frm.trigger("render_location_trash_icons");
+
+        // 🔒 Lock Opening Balance if Sales Bills (Invoices) exist
+        if (!frm.is_new() && frm.doc.name) {
+            frappe.db.count("Invoice", { filters: { customer_id: frm.doc.name } }).then(count => {
+                if (count > 0) {
+                    frm.set_df_property("opening_balance", "read_only", 1);
+                    frm.set_intro(__("Opening Balance is locked because Sales Bills (Invoices) exist for this customer. Updates occur automatically via transactions."), "blue");
+                }
+            });
+        }
     },
 
     render_location_trash_icons(frm) {

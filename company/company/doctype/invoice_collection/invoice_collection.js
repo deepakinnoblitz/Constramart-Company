@@ -45,21 +45,10 @@ frappe.ui.form.on("Invoice Collection", {
             frm.set_intro(__("This is an Advance Payment"), "blue");
         }
 
-        // Auto-calculate amount pending on input
+        // Auto-calculate breakdown on input
         if (frm.fields_dict.amount_collected) {
             $(frm.fields_dict.amount_collected.input).on("input", function () {
-                const pay = frm.doc.amount_to_pay || 0;
-                const collected_now = flt($(this).val());
-                frm.set_value("amount_pending", pay - collected_now);
-            });
-        }
-        if (frm.is_new()) {
-            frm.set_query("invoice", function () {
-                return {
-                    filters: {
-                        "balance_amount": [">", 0]
-                    },
-                };
+                recalculate_breakdown(frm);
             });
         }
     },
@@ -71,28 +60,46 @@ frappe.ui.form.on("Invoice Collection", {
             frappe.db.get_doc("Invoice", frm.doc.invoice).then(invoice_doc => {
                 frm.set_value("customer_id", invoice_doc.customer_id);
 
-                // Get total already collected for this invoice
                 frappe.db.get_list("Invoice Collection", {
                     filters: { invoice: frm.doc.invoice },
-                    fields: ["amount_collected"]
+                    fields: ["amount_collected", "advance_adjusted", "opening_balance_deducted", "excess_amount"]
                 }).then(existing => {
-                    let total_collected = 0;
+                    let total_applied = 0;
                     if (existing && existing.length) {
-                        total_collected = existing.reduce((sum, r) => sum + (r.amount_collected || 0), 0);
+                        total_applied = existing.reduce((sum, r) => sum + (flt(r.amount_collected) + flt(r.advance_adjusted) + flt(r.opening_balance_deducted) - flt(r.excess_amount)), 0);
                     }
 
-                    const remaining = invoice_doc.grand_total - total_collected;
-                    frm.set_value("amount_to_pay", remaining);
+                    const remaining = invoice_doc.grand_total - total_applied;
+                    frm.set_value("amount_to_pay", Math.max(0, remaining));
 
-                    // Initial pending = remaining - this collection (usually 0 on load)
-                    const collected_now = frm.doc.amount_collected || 0;
-                    frm.set_value("amount_pending", remaining - collected_now);
+                    // Fetch customer balances and recalculate
+                    frm.trigger("fetch_balances");
                 });
             });
         }
     },
 
+    use_opening_balance(frm) {
+        recalculate_breakdown(frm);
+    },
+
+    fetch_balances(frm) {
+        if (!frm.doc.customer_id) return;
+        frappe.call({
+            method: "company.company.api.get_customer_balances",
+            args: { customer_id: frm.doc.customer_id },
+            callback: function (r) {
+                if (r.message) {
+                    frm.set_value("available_opening_balance", r.message.opening_balance || 0);
+                    frm.set_value("available_advance", r.message.available_advance || 0);
+                    recalculate_breakdown(frm);
+                }
+            }
+        });
+    },
+
     is_advance(frm) {
+        recalculate_breakdown(frm);
         if (frm.doc.is_advance) {
             frappe.msgprint({
                 title: __("Advance Payment"),
@@ -118,6 +125,45 @@ frappe.ui.form.on("Invoice Collection", {
         }
     }
 });
+
+function recalculate_breakdown(frm) {
+    const pay = flt(frm.doc.amount_to_pay);
+    const avail_adv = flt(frm.doc.available_advance);
+    const avail_ob = flt(frm.doc.available_opening_balance);
+
+    if (frm.doc.is_advance) {
+        frm.set_value("advance_adjusted", 0);
+        frm.set_value("opening_balance_deducted", 0);
+        frm.set_value("excess_amount", 0);
+        const collected = flt(frm.doc.amount_collected);
+        frm.set_value("amount_pending", pay - collected);
+        return;
+    }
+
+    // Step 1: Advance Adjustment
+    const adv_adj = Math.min(avail_adv, pay);
+    frm.set_value("advance_adjusted", adv_adj);
+    let rem_after_adv = pay - adv_adj;
+
+    // Step 2: Opening Balance Deduction
+    let ob_deducted = 0;
+    if (frm.doc.use_opening_balance) {
+        ob_deducted = Math.min(avail_ob, rem_after_adv);
+    }
+    frm.set_value("opening_balance_deducted", ob_deducted);
+    let rem_after_ob = rem_after_adv - ob_deducted;
+
+    // Step 3: Normal Collection & Excess
+    const collected = flt(frm.doc.amount_collected);
+    let pending = rem_after_ob - collected;
+    let excess = 0;
+    if (pending < 0) {
+        excess = Math.abs(pending);
+        pending = 0;
+    }
+    frm.set_value("excess_amount", excess);
+    frm.set_value("amount_pending", pending);
+}
 
 function toggle_advance_field(frm) {
     if (!frm.doc.invoice) {

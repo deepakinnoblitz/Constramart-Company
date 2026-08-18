@@ -2587,6 +2587,77 @@ def get_expense_tracker_summary(filter_type="", from_date="", to_date="", expens
 
 
 @frappe.whitelist()
+def get_customer_balances(customer_id):
+    """Fetch current opening_balance and available_advance for a Customer"""
+    if not customer_id:
+        return {"opening_balance": 0, "available_advance": 0}
+    
+    customer = frappe.db.get_value("Customer", customer_id, ["opening_balance", "total_advance_amount"], as_dict=True) or {}
+    ob = float(customer.get("opening_balance") or 0)
+    
+    adv_collections = frappe.db.sql("""
+        SELECT COALESCE(SUM(amount_collected), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND is_advance = 1
+    """, customer_id)[0][0] or 0
+    
+    adv_used = frappe.db.sql("""
+        SELECT COALESCE(SUM(advance_adjusted), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL)
+    """, customer_id)[0][0] or 0
+    
+    available_advance = max(0.0, float(adv_collections) - float(adv_used))
+    
+    return {
+        "opening_balance": ob,
+        "available_advance": available_advance
+    }
+
+
+@frappe.whitelist()
+def sync_customer_opening_balance(customer_id, doc=None):
+    """Synchronize Customer Opening Balance and Available Advance Amount from collections"""
+    if not customer_id:
+        return
+    
+    adv_collections = frappe.db.sql("""
+        SELECT COALESCE(SUM(amount_collected), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND is_advance = 1
+    """, customer_id)[0][0] or 0
+    
+    adv_used = frappe.db.sql("""
+        SELECT COALESCE(SUM(advance_adjusted), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL)
+    """, customer_id)[0][0] or 0
+    
+    avail_adv = max(0.0, float(adv_collections) - float(adv_used))
+
+    # Fetch net OB changes from Invoice Collection
+    total_excess = frappe.db.sql("""
+        SELECT COALESCE(SUM(excess_amount), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s
+    """, customer_id)[0][0] or 0
+
+    total_ob_deducted = frappe.db.sql("""
+        SELECT COALESCE(SUM(opening_balance_deducted), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s
+    """, customer_id)[0][0] or 0
+
+    # Calculate current opening balance
+    current_ob = frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0
+    
+    # We maintain total_advance_amount on Customer
+    frappe.db.set_value("Customer", customer_id, {
+        "total_advance_amount": avail_adv
+    })
+
+
+@frappe.whitelist()
 def check_customer_links(customer):
     linked_doctypes = [
         ("Invoice", "customer_id"),

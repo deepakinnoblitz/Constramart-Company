@@ -17,10 +17,16 @@
   "collection_date",
   "mode_of_payment",
   "is_advance",
+  "available_advance",
+  "advance_adjusted",
+  "available_opening_balance",
+  "use_opening_balance",
+  "opening_balance_deducted",
   "column_break_wmma",
   "amount_to_pay",
   "amount_collected",
   "amount_pending",
+  "excess_amount",
   "section_break_ybiw",
   "remarks",
   "section_break_homd",
@@ -141,6 +147,52 @@
    "fieldname": "is_advance",
    "fieldtype": "Check",
    "label": "Is Advance"
+  },
+  {
+   "default": "0",
+   "fieldname": "available_advance",
+   "fieldtype": "Currency",
+   "label": "Available Advance Balance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "advance_adjusted",
+   "fieldtype": "Currency",
+   "label": "Advance Amount Adjusted",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "available_opening_balance",
+   "fieldtype": "Currency",
+   "label": "Available Opening Balance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "use_opening_balance",
+   "fieldtype": "Check",
+   "label": "Use Opening Balance"
+  },
+  {
+   "default": "0",
+   "fieldname": "opening_balance_deducted",
+   "fieldtype": "Currency",
+   "label": "Opening Balance Deducted",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "excess_amount",
+   "fieldtype": "Currency",
+   "label": "Excess Collection (Credited to Opening Balance)",
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_shlr",

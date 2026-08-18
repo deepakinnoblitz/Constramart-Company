@@ -23,6 +23,8 @@
   "city",
   "billing_address",
   "remarks",
+  "opening_balance",
+  "total_advance_amount",
   "section_break_ngli",
   "location",
   "section_break_spsn",
@@ -82,6 +84,22 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "default": "0",
+   "fieldname": "opening_balance",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Opening Balance",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_advance_amount",
+   "fieldtype": "Currency",
+   "label": "Available Advance Amount",
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_dgoa",

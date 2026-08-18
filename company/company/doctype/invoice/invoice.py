@@ -141,8 +141,9 @@ class Invoice(Document):
 
         self.grand_total = total + (flt(self.roundoff) if hasattr(self, 'roundoff') else 0)
 
-        # Sync Balance Amount
-        self.balance_amount = flt(self.grand_total) - flt(self.received_amount)
+        # Sync Balance Amount considering direct advance_amount_paid
+        adv_paid = flt(self.advance_amount_paid)
+        self.balance_amount = max(0.0, flt(self.grand_total) - flt(self.received_amount) - adv_paid)
 
     def handle_new_location(self):
         if getattr(self, "is_new_location", 0):
@@ -172,6 +173,26 @@ class Invoice(Document):
         if self.purchase_id:
             frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
             
+        # Create advance collection if advance_amount_paid > 0
+        if flt(self.advance_amount_paid) > 0 and getattr(self, "advance_payment_type", None):
+            adv_exists = frappe.db.exists("Invoice Collection", {
+                "invoice": self.name,
+                "is_advance": 1
+            })
+            if not adv_exists:
+                adv_coll = frappe.get_doc({
+                    "doctype": "Invoice Collection",
+                    "invoice": self.name,
+                    "customer_id": self.customer_id,
+                    "collection_date": self.invoice_date or frappe.utils.today(),
+                    "amount_collected": self.advance_amount_paid,
+                    "mode_of_payment": self.advance_payment_type,
+                    "is_advance": 1,
+                    "business_person": self.business_person_name,
+                    "remarks": f"Advance payment recorded on Sales Bill {self.name}"
+                })
+                adv_coll.insert(ignore_permissions=True)
+
         # Update Customer status on 2nd invoice creation
         if self.customer_id:
             invoice_count = frappe.db.count("Invoice", filters={"customer_id": self.customer_id})
