@@ -72,7 +72,7 @@ class InvoiceCollection(Document):
 
 		# Pending before this collection (Amount to Pay)
 		prev_applied = frappe.db.sql("""
-			SELECT COALESCE(SUM(amount_collected + advance_adjusted - excess_amount), 0)
+			SELECT COALESCE(SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END), 0)
 			FROM `tabInvoice Collection`
 			WHERE invoice = %s AND name != %s
 		""", (self.invoice, self.name or ""))[0][0] or 0
@@ -111,11 +111,11 @@ class InvoiceCollection(Document):
 				self.excess_amount = 0.0
 				self.amount_pending = rem_after_ob - collected_normally
 		else:
-			self.advance_adjusted = 0.0
 			self.opening_balance_deduction = 0.0
 			self.amount_collected_using_opening_balance = 0.0
 			self.excess_amount = 0.0
 			collected = float(getattr(self, "amount_collected_normally", 0.0) or getattr(self, "amount_collected", 0.0) or 0.0)
+			self.advance_adjusted = collected
 			self.amount_collected = collected
 			self.amount_pending = max(0.0, pending_before - collected)
 
@@ -165,7 +165,7 @@ class InvoiceCollection(Document):
 		
 		# Total effective collection applied to Invoice
 		total_applied = frappe.utils.flt(frappe.db.sql("""
-			SELECT SUM(amount_collected + advance_adjusted - excess_amount) as total
+			SELECT SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END) as total
 			FROM `tabInvoice Collection`
 			WHERE invoice = %s
 		""", (self.invoice,))[0][0] or 0)

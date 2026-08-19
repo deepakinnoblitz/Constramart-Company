@@ -181,7 +181,6 @@
    "default": "0",
    "fieldname": "advance_adjusted",
    "fieldtype": "Currency",
-   "hidden": 1,
    "label": "Advance Amount",
    "precision": "2",
    "read_only": 1
@@ -251,7 +250,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-19 15:53:59.077135",
+ "modified": "2026-08-19 16:02:11.652525",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Collection",

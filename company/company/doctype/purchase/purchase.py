@@ -110,7 +110,7 @@ class Purchase(Document):
 
         # Sync in-memory values so UI reflects updated paid_amount immediately on first save
         total_paid = frappe.utils.flt(frappe.db.sql("""
-            SELECT SUM(amount_paid + advance_adjusted - excess_amount) FROM `tabPurchase Collection`
+            SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END) FROM `tabPurchase Collection`
             WHERE purchase = %s
         """, (self.name,))[0][0] or 0)
         
@@ -175,7 +175,7 @@ class Purchase(Document):
         # Sync Paid Amount and Balance Amount (Final Authority - Always recalculate on save)
         if self.name:
             total_paid = frappe.db.sql("""
-                SELECT SUM(amount_paid + advance_adjusted - excess_amount) FROM `tabPurchase Collection`
+                SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END) FROM `tabPurchase Collection`
                 WHERE purchase = %s
             """, (self.name,))[0][0] or 0
             self.paid_amount = frappe.utils.flt(total_paid)

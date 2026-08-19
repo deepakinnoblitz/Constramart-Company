@@ -24,8 +24,8 @@ class Invoice(Document):
                     frappe.bold(item.idx)
                 ))
 
-        if flt(self.advance_amount_paid) > 0 and not self.advance_payment_type:
-            self.advance_payment_type = "CASH RECEIVED"
+        if flt(self.advance_amount_paid) > 0 and not getattr(self, "advance_payment_type", None):
+            frappe.throw(_("Please select Advance Payment Mode since Advance Amount Paid is entered."))
 
         self.validate_purchase_link()
         self.calculate_child_rows()

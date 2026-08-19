@@ -70,7 +70,7 @@ class PurchaseCollection(Document):
 
 		# Pending before this payment (Amount to Pay)
 		prev_applied = frappe.db.sql("""
-			SELECT COALESCE(SUM(amount_paid + advance_adjusted - excess_amount), 0)
+			SELECT COALESCE(SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END), 0)
 			FROM `tabPurchase Collection`
 			WHERE purchase = %s AND name != %s
 		""", (self.purchase, self.name or ""))[0][0] or 0
@@ -107,13 +107,18 @@ class PurchaseCollection(Document):
 				self.excess_amount = 0.0
 				self.amount_pending = rem_after_ob - paid_normally
 		else:
-			self.advance_adjusted = 0.0
 			self.opening_balance_deduction = 0.0
 			self.amount_paid_using_opening_balance = 0.0
 			self.excess_amount = 0.0
 			paid = float(getattr(self, "amount_paid_normally", 0.0) or getattr(self, "amount_paid", 0.0) or 0.0)
+			self.advance_adjusted = paid
 			self.amount_paid = paid
 			self.amount_pending = max(0.0, pending_before - paid)
+
+	def validate(self):
+		if not self.is_new() and self.is_advance:
+			frappe.throw(_("Advance Payment collections cannot be edited directly. Please edit the Purchase Bill instead."))
+		self.calculate_collection_breakdown()
 
 	def on_trash(self):
 		"""Only allow deleting if it is the latest collection for the purchase order"""
@@ -121,9 +126,6 @@ class PurchaseCollection(Document):
 
 	def ensure_latest_collection(self):
 		"""Check if there are any newer collections for the same purchase order"""
-		if not self.is_new() and self.is_advance:
-			frappe.throw(_("Advance Payment collections cannot be edited directly. Please edit the Purchase Bill instead."))
-
 		if self.is_new() or not self.purchase:
 			return
 
@@ -146,6 +148,11 @@ class PurchaseCollection(Document):
 	
 	def after_delete(self):
 		"""Update Purchase amounts after deleting a collection"""
+		if self.purchase and self.is_advance:
+			frappe.db.set_value("Purchase", self.purchase, {
+				"advance_amount_paid": 0.0,
+				"advance_payment_type": None
+			})
 		self.update_purchase_amounts()
 	
 	def update_purchase_amounts(self):
@@ -158,7 +165,7 @@ class PurchaseCollection(Document):
 		
 		# Total effective payment applied to Purchase
 		total_applied = frappe.utils.flt(frappe.db.sql("""
-			SELECT SUM(amount_paid + advance_adjusted - excess_amount) as total
+			SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END) as total
 			FROM `tabPurchase Collection`
 			WHERE purchase = %s
 		""", (self.purchase,))[0][0] or 0)

@@ -134,11 +134,17 @@ frappe.ui.form.on("Purchase Collection", {
 
             frappe.db.get_list("Purchase Collection", {
                 filters: filters,
-                fields: ["amount_paid", "advance_adjusted", "opening_balance_deduction", "excess_amount"]
+                fields: ["amount_paid", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
             }).then(existing => {
                 let total_applied = 0;
                 if (existing && existing.length) {
-                    total_applied = existing.reduce((sum, r) => sum + (flt(r.amount_paid) + flt(r.advance_adjusted) - flt(r.excess_amount)), 0);
+                    total_applied = existing.reduce((sum, r) => {
+                        if (r.is_advance) {
+                            return sum + flt(r.amount_paid);
+                        } else {
+                            return sum + (flt(r.amount_paid) + flt(r.advance_adjusted) - flt(r.excess_amount));
+                        }
+                    }, 0);
                 }
 
                 const remaining = purchase_doc.grand_total - total_applied;
@@ -153,11 +159,7 @@ frappe.ui.form.on("Purchase Collection", {
     use_opening_balance(frm) {
         if (!frm.doc.use_opening_balance) {
             frm.set_value("opening_balance_deduction", 0);
-        } else {
-            const avail_ob = flt(frm.doc.available_opening_balance);
-            const pay = flt(frm.doc.amount_to_pay);
-            const default_ob = Math.min(avail_ob, pay);
-            frm.set_value("opening_balance_deduction", default_ob);
+            frm.set_value("amount_paid_using_opening_balance", 0);
         }
         recalculate_breakdown(frm);
     },
@@ -237,6 +239,17 @@ function recalculate_breakdown(frm) {
     const pay = flt(frm.doc.amount_to_pay);
     const avail_adv = flt(frm.doc.available_advance);
     const avail_ob = flt(frm.doc.available_opening_balance);
+
+    if (frm.doc.is_advance) {
+        const paid = flt(frm.doc.amount_paid_normally || frm.doc.amount_paid);
+        frm.set_value("advance_adjusted", paid);
+        frm.set_value("opening_balance_deduction", 0);
+        frm.set_value("amount_paid_using_opening_balance", 0);
+        frm.set_value("excess_amount", 0);
+        frm.set_value("amount_paid", paid);
+        frm.set_value("amount_pending", Math.max(0, pay - paid));
+        return;
+    }
 
     // Hide Advance fields
     frm.set_df_property("available_advance", "hidden", 1);

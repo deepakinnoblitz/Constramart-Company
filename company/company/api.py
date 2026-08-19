@@ -99,7 +99,7 @@ def before_insert_invoice(doc, method):
 @frappe.whitelist()
 def get_total_collected(invoice_name):
     total = frappe.db.sql("""
-        SELECT SUM(amount_collected)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END)
         FROM `tabInvoice Collection`
         WHERE invoice=%s
     """, invoice_name)[0][0] or 0
@@ -146,12 +146,12 @@ def validate_invoice_collection(doc, method):
         return
 
     already_collected = frappe.db.sql("""
-        SELECT SUM(amount_collected + advance_adjusted - excess_amount)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END)
         FROM `tabInvoice Collection`
         WHERE invoice=%s AND name != %s
     """, (doc.invoice, doc.name or ""))[0][0] or 0
 
-    trying_to_add = flt(doc.amount_collected) + flt(doc.advance_adjusted) - flt(doc.excess_amount)
+    trying_to_add = flt(doc.amount_collected) if doc.is_advance else (flt(doc.amount_collected) + flt(doc.advance_adjusted) - flt(doc.excess_amount))
     new_total = flt(already_collected) + trying_to_add
 
     if new_total > flt(invoice.grand_total) + 0.01:
@@ -174,12 +174,12 @@ def validate_purchase_collection(doc, method):
         return
 
     already_paid = frappe.db.sql("""
-        SELECT SUM(amount_paid + advance_adjusted - excess_amount)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END)
         FROM `tabPurchase Collection`
         WHERE purchase=%s AND name != %s
     """, (doc.purchase, doc.name or ""))[0][0] or 0
 
-    trying_to_add = flt(doc.amount_paid) + flt(doc.advance_adjusted) - flt(doc.excess_amount)
+    trying_to_add = flt(doc.amount_paid) if doc.is_advance else (flt(doc.amount_paid) + flt(doc.advance_adjusted) - flt(doc.excess_amount))
     new_total = flt(already_paid) + trying_to_add
 
     if new_total > flt(purchase.grand_total) + 0.01:
@@ -199,7 +199,7 @@ def update_purchase_collection_amounts(doc, method):
 
     purchase = frappe.get_doc("Purchase", doc.purchase)
     total_applied = flt(frappe.db.sql("""
-        SELECT SUM(amount_paid + advance_adjusted - excess_amount)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END)
         FROM `tabPurchase Collection`
         WHERE purchase = %s
     """, (doc.purchase,))[0][0] or 0)

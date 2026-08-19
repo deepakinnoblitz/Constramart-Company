@@ -162,6 +162,7 @@
    "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
    "fieldname": "available_advance",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Available Advance Balance",
    "precision": "2",
    "read_only": 1
@@ -257,7 +258,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-19 15:53:45.381001",
+ "modified": "2026-08-19 16:02:23.279843",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Invoice Collection",

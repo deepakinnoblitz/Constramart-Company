@@ -136,11 +136,17 @@ frappe.ui.form.on("Invoice Collection", {
 
             frappe.db.get_list("Invoice Collection", {
                 filters: filters,
-                fields: ["amount_collected", "advance_adjusted", "opening_balance_deduction", "excess_amount"]
+                fields: ["amount_collected", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
             }).then(existing => {
                 let total_applied = 0;
                 if (existing && existing.length) {
-                    total_applied = existing.reduce((sum, r) => sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount)), 0);
+                    total_applied = existing.reduce((sum, r) => {
+                        if (r.is_advance) {
+                            return sum + flt(r.amount_collected);
+                        } else {
+                            return sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount));
+                        }
+                    }, 0);
                 }
 
                 const remaining = invoice_doc.grand_total - total_applied;
@@ -239,11 +245,11 @@ function recalculate_breakdown(frm) {
     const avail_ob = flt(frm.doc.available_opening_balance);
 
     if (frm.doc.is_advance) {
-        frm.set_value("advance_adjusted", 0);
+        const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);
+        frm.set_value("advance_adjusted", collected);
         frm.set_value("opening_balance_deduction", 0);
         frm.set_value("amount_collected_using_opening_balance", 0);
         frm.set_value("excess_amount", 0);
-        const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);
         frm.set_value("amount_collected", collected);
         frm.set_value("amount_pending", Math.max(0, pay - collected));
         return;
