@@ -48,7 +48,7 @@ frappe.ui.form.on("Customer", {
             frappe.db.count("Invoice", { filters: { customer_id: frm.doc.name } }).then(count => {
                 if (count > 0) {
                     frm.set_df_property("opening_balance", "read_only", 1);
-                    frm.set_intro(__("Opening Balance is locked because Sales Bills (Invoices) exist for this customer. Updates occur automatically via transactions."), "blue");
+                    frm.set_intro(__("Customer Edit and Opening Balance is locked because Sales Bills (Invoices) exist for this customer. Updates occur automatically via transactions."), "blue");
 
                     // Add Opening Balance action button ONLY when Customer Opening Balance is locked
                     frm.add_custom_button(__("Add Opening Balance"), () => {

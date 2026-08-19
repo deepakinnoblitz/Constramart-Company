@@ -13,6 +13,24 @@ frappe.ui.form.on("Invoice Collection", {
         });
     },
 
+    before_save(frm) {
+        if (flt(frm.doc.excess_amount) > 0 && !frm._excess_confirmed) {
+            frappe.validated = false;
+            frappe.confirm(
+                __("An excess collection of <b>{0}</b> will be credited to the customer's Opening Balance.<br><br>Do you want to proceed?", [format_currency(frm.doc.excess_amount)]),
+                function () {
+                    frm._excess_confirmed = true;
+                    frm.save();
+                },
+                function () {
+                    frm._excess_confirmed = false;
+                }
+            );
+        } else {
+            frm._excess_confirmed = false;
+        }
+    },
+
     refresh(frm) {
         toggle_advance_field(frm);
 
@@ -122,7 +140,7 @@ frappe.ui.form.on("Invoice Collection", {
             }).then(existing => {
                 let total_applied = 0;
                 if (existing && existing.length) {
-                    total_applied = existing.reduce((sum, r) => sum + (flt(r.amount_collected) + flt(r.advance_adjusted) + flt(r.opening_balance_deduction) - flt(r.excess_amount)), 0);
+                    total_applied = existing.reduce((sum, r) => sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount)), 0);
                 }
 
                 const remaining = invoice_doc.grand_total - total_applied;
@@ -252,6 +270,7 @@ function recalculate_breakdown(frm) {
         ob_deducted = 0;
         frm.set_value("opening_balance_deduction", 0);
     }
+    frm.set_df_property("amount_collected_using_opening_balance", "hidden", frm.doc.use_opening_balance ? 0 : 1);
     frm.set_value("amount_collected_using_opening_balance", ob_deducted);
     let rem_after_ob = rem_after_adv - ob_deducted;
 
@@ -271,6 +290,12 @@ function recalculate_breakdown(frm) {
 }
 
 function toggle_advance_field(frm) {
+    if (frm.is_new()) {
+        // Hide Is Advance checkbox on new collection forms
+        frm.set_df_property("is_advance", "hidden", 1);
+        return;
+    }
+
     if (!frm.doc.invoice) {
         // No invoice selected - hide advance checkbox
         frm.set_df_property("is_advance", "hidden", 1);

@@ -9,7 +9,7 @@ app_include_js = [
     # "/assets/company/js/leads.js",
     "/assets/company/js/quotation.js",
     "/assets/company/js/estimation.js?v=4",
-    "/assets/company/js/invoice.js?v=17",
+    "/assets/company/js/invoice.js?v=21",
     "/assets/company/js/purchase.js?v=4",
     "/assets/company/js/expenses.js",
     "/assets/company/js/custom.js",

@@ -1,282 +1,283 @@
 {
- "actions": [],
- "autoname": "INVC.#####",
- "creation": "2026-08-19 12:20:34.525930",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "invoice_details_section",
-  "invoice",
-  "customer_name",
-  "column_break_yvpi",
-  "customer_id",
-  "company_name",
-  "section_break_shlr",
-  "business_person",
-  "section_break_wcnb",
-  "is_advance",
-  "column_break_imyj",
-  "available_advance",
-  "advance_adjusted",
-  "opening_balance_details_section",
-  "available_opening_balance",
-  "column_break_vwed",
-  "use_opening_balance",
-  "opening_balance_deduction",
-  "section_break_svph",
-  "collection_date",
-  "mode_of_payment",
-  "column_break_wmma",
-  "amount_to_pay",
-  "amount_collected_using_opening_balance",
-  "amount_collected_normally",
-  "amount_collected",
-  "amount_pending",
-  "excess_amount",
-  "section_break_ybiw",
-  "remarks",
-  "section_break_homd",
-  "owner_name"
- ],
- "fields": [
-  {
-   "fieldname": "invoice",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Invoice",
-   "options": "Invoice",
-   "read_only_depends_on": "eval:!doc.__islocal",
-   "reqd": 1
-  },
-  {
-   "fieldname": "collection_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Collection Date",
-   "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "amount_collected",
-   "fieldtype": "Currency",
-   "label": "Total Amount Collected",
-   "precision": "2",
-   "read_only": 1,
-   "reqd": 1
-  },
-  {
-   "fieldname": "mode_of_payment",
-   "fieldtype": "Link",
-   "label": "Mode of Payment",
-   "options": "Payment Type",
-   "reqd": 1
-  },
-  {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
-  },
-  {
-   "fieldname": "amount_pending",
-   "fieldtype": "Currency",
-   "label": "Amount Pending",
-   "read_only": 1
-  },
-  {
-   "fieldname": "amount_to_pay",
-   "fieldtype": "Currency",
-   "label": "Amount to Pay",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_wmma",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_ybiw",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fetch_from": "invoice.customer_name",
-   "fieldname": "customer_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Customer Name",
-   "read_only": 1
-  },
-  {
-   "fetch_from": "invoice.billing_name",
-   "fieldname": "company_name",
-   "fieldtype": "Data",
-   "label": "Company Name",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_svph",
-   "fieldtype": "Section Break",
-   "label": "Sales Collection Information"
-  },
-  {
-   "fieldname": "invoice_details_section",
-   "fieldtype": "Section Break",
-   "label": "Sales Details"
-  },
-  {
-   "fieldname": "column_break_yvpi",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_homd",
-   "fieldtype": "Section Break"
-  },
-  {
-   "default": "__user",
-   "fieldname": "owner_name",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "in_list_view": 1,
-   "label": "Handled By",
-   "options": "User",
-   "read_only": 1
-  },
-  {
-   "fetch_from": "invoice.customer_id",
-   "fieldname": "customer_id",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Customer ID",
-   "options": "Customer",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "is_advance",
-   "fieldtype": "Check",
-   "label": "Is Advance"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
-   "fieldname": "available_advance",
-   "fieldtype": "Currency",
-   "label": "Available Advance Balance",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
-   "fieldname": "advance_adjusted",
-   "fieldtype": "Currency",
-   "label": "Advance Amount Adjusted",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deducted>0",
-   "fieldname": "available_opening_balance",
-   "fieldtype": "Currency",
-   "label": "Available Opening Balance",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deducted>0",
-   "fieldname": "use_opening_balance",
-   "fieldtype": "Check",
-   "label": "Use Opening Balance"
-  },
-  {
-   "default": "0",
-   "fieldname": "excess_amount",
-   "fieldtype": "Currency",
-   "label": "Excess Collection (Credited to Opening Balance)",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_shlr",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "business_person",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Business Person",
-   "options": "Business Person",
-   "reqd": 1
-  },
-  {
-   "fieldname": "opening_balance_details_section",
-   "fieldtype": "Section Break",
-   "label": "Opening Balance Details"
-  },
-  {
-   "fieldname": "column_break_vwed",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_wcnb",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_imyj",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "amount_collected_using_opening_balance",
-   "fieldtype": "Currency",
-   "label": "Amount Collected (Using Opening Balance)",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "amount_collected_normally",
-   "fieldtype": "Currency",
-   "label": "Amount Collected",
-   "precision": "2"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.use_opening_balance==1",
-   "fieldname": "opening_balance_deduction",
-   "fieldtype": "Currency",
-   "label": "Opening Balance Deduction",
-   "precision": "2"
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-08-19 12:29:53.560166",
- "modified_by": "Administrator",
- "module": "Company",
- "name": "Invoice Collection",
- "naming_rule": "Expression (old style)",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "sort_field": "creation",
- "sort_order": "DESC",
- "states": []
+    "actions": [],
+    "autoname": "INVC.#####",
+    "creation": "2026-08-19 12:20:34.525930",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "invoice_details_section",
+        "invoice",
+        "customer_name",
+        "column_break_yvpi",
+        "customer_id",
+        "company_name",
+        "section_break_shlr",
+        "business_person",
+        "section_break_wcnb",
+        "is_advance",
+        "column_break_imyj",
+        "available_advance",
+        "advance_adjusted",
+        "opening_balance_details_section",
+        "available_opening_balance",
+        "column_break_vwed",
+        "use_opening_balance",
+        "opening_balance_deduction",
+        "section_break_svph",
+        "collection_date",
+        "mode_of_payment",
+        "column_break_wmma",
+        "amount_to_pay",
+        "amount_collected_using_opening_balance",
+        "amount_collected_normally",
+        "amount_collected",
+        "amount_pending",
+        "excess_amount",
+        "section_break_ybiw",
+        "remarks",
+        "section_break_homd",
+        "owner_name"
+    ],
+    "fields": [
+        {
+            "fieldname": "invoice",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Invoice",
+            "options": "Invoice",
+            "read_only_depends_on": "eval:!doc.__islocal",
+            "reqd": 1
+        },
+        {
+            "fieldname": "collection_date",
+            "fieldtype": "Date",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Collection Date",
+            "reqd": 1
+        },
+        {
+            "default": "0",
+            "fieldname": "amount_collected",
+            "fieldtype": "Currency",
+            "label": "Total Amount Collected",
+            "precision": "2",
+            "read_only": 1,
+            "reqd": 1
+        },
+        {
+            "fieldname": "mode_of_payment",
+            "fieldtype": "Link",
+            "label": "Mode of Payment",
+            "options": "Payment Type",
+            "reqd": 1
+        },
+        {
+            "fieldname": "remarks",
+            "fieldtype": "Small Text",
+            "label": "Remarks"
+        },
+        {
+            "fieldname": "amount_pending",
+            "fieldtype": "Currency",
+            "label": "Amount Pending",
+            "read_only": 1
+        },
+        {
+            "fieldname": "amount_to_pay",
+            "fieldtype": "Currency",
+            "label": "Amount to Pay",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_wmma",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "section_break_ybiw",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fetch_from": "invoice.customer_name",
+            "fieldname": "customer_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Customer Name",
+            "read_only": 1
+        },
+        {
+            "fetch_from": "invoice.billing_name",
+            "fieldname": "company_name",
+            "fieldtype": "Data",
+            "label": "Company Name",
+            "read_only": 1
+        },
+        {
+            "fieldname": "section_break_svph",
+            "fieldtype": "Section Break",
+            "label": "Sales Collection Information"
+        },
+        {
+            "fieldname": "invoice_details_section",
+            "fieldtype": "Section Break",
+            "label": "Sales Details"
+        },
+        {
+            "fieldname": "column_break_yvpi",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "section_break_homd",
+            "fieldtype": "Section Break"
+        },
+        {
+            "default": "__user",
+            "fieldname": "owner_name",
+            "fieldtype": "Link",
+            "hidden": 1,
+            "in_list_view": 1,
+            "label": "Handled By",
+            "options": "User",
+            "read_only": 1
+        },
+        {
+            "fetch_from": "invoice.customer_id",
+            "fieldname": "customer_id",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Customer ID",
+            "options": "Customer",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "fieldname": "is_advance",
+            "fieldtype": "Check",
+            "label": "Is Advance"
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
+            "fieldname": "available_advance",
+            "fieldtype": "Currency",
+            "label": "Available Advance Balance",
+            "precision": "2",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
+            "fieldname": "advance_adjusted",
+            "fieldtype": "Currency",
+            "label": "Advance Amount Adjusted",
+            "precision": "2",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deducted>0",
+            "fieldname": "available_opening_balance",
+            "fieldtype": "Currency",
+            "label": "Available Opening Balance",
+            "precision": "2",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deducted>0",
+            "fieldname": "use_opening_balance",
+            "fieldtype": "Check",
+            "label": "Use Opening Balance"
+        },
+        {
+            "default": "0",
+            "fieldname": "excess_amount",
+            "fieldtype": "Currency",
+            "label": "Excess Collection (Credited to Opening Balance)",
+            "precision": "2",
+            "read_only": 1
+        },
+        {
+            "fieldname": "section_break_shlr",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "business_person",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "Business Person",
+            "options": "Business Person",
+            "reqd": 1
+        },
+        {
+            "fieldname": "opening_balance_details_section",
+            "fieldtype": "Section Break",
+            "label": "Opening Balance Details"
+        },
+        {
+            "fieldname": "column_break_vwed",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "section_break_wcnb",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "column_break_imyj",
+            "fieldtype": "Column Break"
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.use_opening_balance==1",
+            "fieldname": "amount_collected_using_opening_balance",
+            "fieldtype": "Currency",
+            "label": "Amount Collected (Using Opening Balance)",
+            "precision": "2",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "fieldname": "amount_collected_normally",
+            "fieldtype": "Currency",
+            "label": "Amount Collected",
+            "precision": "2"
+        },
+        {
+            "default": "0",
+            "depends_on": "eval:doc.use_opening_balance==1",
+            "fieldname": "opening_balance_deduction",
+            "fieldtype": "Currency",
+            "label": "Opening Balance Deduction",
+            "precision": "2"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2026-08-19 12:29:53.560166",
+    "modified_by": "Administrator",
+    "module": "Company",
+    "name": "Invoice Collection",
+    "naming_rule": "Expression (old style)",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": []
 }
