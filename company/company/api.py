@@ -2587,30 +2587,44 @@ def get_expense_tracker_summary(filter_type="", from_date="", to_date="", expens
 
 
 @frappe.whitelist()
-def get_customer_balances(customer_id):
+def get_customer_balances(customer_id, current_collection=None):
     """Fetch current opening_balance and available_advance for a Customer"""
     if not customer_id:
         return {"opening_balance": 0, "available_advance": 0}
     
-    customer = frappe.db.get_value("Customer", customer_id, ["opening_balance", "total_advance_amount"], as_dict=True) or {}
-    ob = float(customer.get("opening_balance") or 0)
+    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance"], as_dict=True) or {}
+    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+
+    other_ob_deducted = frappe.db.sql("""
+        SELECT COALESCE(SUM(opening_balance_deduction), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
+
+    other_excess = frappe.db.sql("""
+        SELECT COALESCE(SUM(excess_amount), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
+
+    avail_ob = max(0.0, init_ob - float(other_ob_deducted) + float(other_excess))
     
     adv_collections = frappe.db.sql("""
         SELECT COALESCE(SUM(amount_collected), 0)
         FROM `tabInvoice Collection`
-        WHERE customer_id = %s AND is_advance = 1
+        WHERE customer_id = %s AND is_advance = 1 AND (invoice IS NULL OR invoice = '')
     """, customer_id)[0][0] or 0
     
     adv_used = frappe.db.sql("""
         SELECT COALESCE(SUM(advance_adjusted), 0)
         FROM `tabInvoice Collection`
-        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL)
-    """, customer_id)[0][0] or 0
+        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL) AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
     
     available_advance = max(0.0, float(adv_collections) - float(adv_used))
     
     return {
-        "opening_balance": ob,
+        "opening_balance": avail_ob,
         "available_advance": available_advance
     }
 
@@ -2624,7 +2638,7 @@ def sync_customer_opening_balance(customer_id, doc=None):
     adv_collections = frappe.db.sql("""
         SELECT COALESCE(SUM(amount_collected), 0)
         FROM `tabInvoice Collection`
-        WHERE customer_id = %s AND is_advance = 1
+        WHERE customer_id = %s AND is_advance = 1 AND (invoice IS NULL OR invoice = '')
     """, customer_id)[0][0] or 0
     
     adv_used = frappe.db.sql("""
@@ -2643,18 +2657,168 @@ def sync_customer_opening_balance(customer_id, doc=None):
     """, customer_id)[0][0] or 0
 
     total_ob_deducted = frappe.db.sql("""
-        SELECT COALESCE(SUM(opening_balance_deducted), 0)
+        SELECT COALESCE(SUM(opening_balance_deduction), 0)
         FROM `tabInvoice Collection`
         WHERE customer_id = %s
     """, customer_id)[0][0] or 0
 
-    # Calculate current opening balance
-    current_ob = frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0
-    
-    # We maintain total_advance_amount on Customer
+    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance"], as_dict=True) or {}
+    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+
+    if not cust_data.get("initial_opening_balance") and init_ob > 0:
+        frappe.db.set_value("Customer", customer_id, "initial_opening_balance", init_ob, update_modified=False)
+
+    new_ob = max(0.0, init_ob - float(total_ob_deducted) + float(total_excess))
+
+    # Update Customer Opening Balance & Available Advance
     frappe.db.set_value("Customer", customer_id, {
+        "opening_balance": new_ob,
         "total_advance_amount": avail_adv
+    }, update_modified=False)
+    
+    sync_customer_opening_balance_logs(customer_id)
+
+
+@frappe.whitelist()
+def add_customer_opening_balance(customer_id, amount, remarks=None):
+    """Add additional opening balance to Customer and insert row into Opening Balance Usage Log"""
+    if not customer_id or not frappe.db.exists("Customer", customer_id):
+        frappe.throw(frappe._("Customer not found."))
+    
+    amount = float(amount or 0)
+    if amount <= 0:
+        frappe.throw(frappe._("Amount must be greater than 0."))
+
+    current_ob = float(frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0)
+    new_ob = current_ob + amount
+    
+    frappe.db.set_value("Customer", customer_id, "opening_balance", new_ob, update_modified=False)
+
+    # Insert child row directly into tabCustomer Opening Balance Log
+    idx = (frappe.db.sql("""
+        SELECT MAX(idx) FROM `tabCustomer Opening Balance Log` WHERE parent = %s
+    """, customer_id)[0][0] or 0) + 1
+
+    log_entry = frappe.get_doc({
+        "doctype": "Customer Opening Balance Log",
+        "parent": customer_id,
+        "parenttype": "Customer",
+        "parentfield": "opening_balance_logs",
+        "idx": idx,
+        "date": frappe.utils.today(),
+        "transaction_type": "Opening Balance Addition",
+        "voucher_type": "Customer",
+        "voucher_no": customer_id,
+        "debit": 0.0,
+        "credit": amount,
+        "balance": new_ob,
+        "remarks": (remarks or "").strip() or "Additional Opening Balance added"
     })
+    log_entry.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "success", "opening_balance": new_ob}
+
+
+@frappe.whitelist()
+def sync_customer_opening_balance_logs(customer_id):
+    """Rebuild Customer Opening Balance Usage Log table and sync opening_balance without bumping parent modified timestamp"""
+    if not customer_id or not frappe.db.exists("Customer", customer_id):
+        return []
+    
+    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance", "creation"], as_dict=True) or {}
+    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+    
+    if not cust_data.get("initial_opening_balance") and init_ob > 0:
+        frappe.db.set_value("Customer", customer_id, "initial_opening_balance", init_ob, update_modified=False)
+
+    # 1. Delete existing log rows from database directly
+    frappe.db.sql("DELETE FROM `tabCustomer Opening Balance Log` WHERE parent = %s", customer_id)
+    
+    running_balance = 0.0
+    logs = []
+    idx = 1
+
+    # 2. Initial Opening Balance Entry
+    if init_ob > 0:
+        running_balance = init_ob
+        log_entry = frappe.get_doc({
+            "doctype": "Customer Opening Balance Log",
+            "parent": customer_id,
+            "parenttype": "Customer",
+            "parentfield": "opening_balance_logs",
+            "idx": idx,
+            "date": frappe.utils.getdate(cust_data.get("creation")),
+            "transaction_type": "Initial Opening Balance",
+            "voucher_type": "Customer",
+            "voucher_no": customer_id,
+            "debit": 0.0,
+            "credit": init_ob,
+            "balance": running_balance,
+            "remarks": "Initial Opening Balance recorded"
+        })
+        log_entry.insert(ignore_permissions=True)
+        logs.append(log_entry.as_dict())
+        idx += 1
+
+    # 3. Fetch all collections affecting OB chronologically
+    collections = frappe.db.sql("""
+        SELECT name, collection_date, invoice, opening_balance_deduction, excess_amount, creation
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (opening_balance_deduction > 0 OR excess_amount > 0)
+        ORDER BY collection_date ASC, creation ASC
+    """, customer_id, as_dict=True)
+
+    for col in collections:
+        deducted = float(col.opening_balance_deduction or 0)
+        excess = float(col.excess_amount or 0)
+
+        if deducted > 0:
+            running_balance -= deducted
+            log_entry = frappe.get_doc({
+                "doctype": "Customer Opening Balance Log",
+                "parent": customer_id,
+                "parenttype": "Customer",
+                "parentfield": "opening_balance_logs",
+                "idx": idx,
+                "date": col.collection_date,
+                "transaction_type": "Sales Collection OB Deduction",
+                "voucher_type": "Invoice Collection",
+                "voucher_no": col.name,
+                "debit": deducted,
+                "credit": 0.0,
+                "balance": running_balance,
+                "remarks": f"Used for Invoice {col.invoice or ''}"
+            })
+            log_entry.insert(ignore_permissions=True)
+            logs.append(log_entry.as_dict())
+            idx += 1
+
+        if excess > 0:
+            running_balance += excess
+            log_entry = frappe.get_doc({
+                "doctype": "Customer Opening Balance Log",
+                "parent": customer_id,
+                "parenttype": "Customer",
+                "parentfield": "opening_balance_logs",
+                "idx": idx,
+                "date": col.collection_date,
+                "transaction_type": "Excess Collection Credit",
+                "voucher_type": "Invoice Collection",
+                "voucher_no": col.name,
+                "debit": 0.0,
+                "credit": excess,
+                "balance": running_balance,
+                "remarks": f"Excess collection from Invoice {col.invoice or ''}"
+            })
+            log_entry.insert(ignore_permissions=True)
+            logs.append(log_entry.as_dict())
+            idx += 1
+
+    new_ob = max(0.0, running_balance)
+    frappe.db.set_value("Customer", customer_id, "opening_balance", new_ob, update_modified=False)
+    
+    return logs
 
 
 @frappe.whitelist()

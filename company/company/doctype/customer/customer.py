@@ -19,7 +19,10 @@ class Customer(Document):
             ):
                 frappe.throw("Phone number already exists")
             
-        if not self.is_new():
+        if self.is_new() or not frappe.db.exists("Invoice", {"customer_id": self.name}):
+            self.initial_opening_balance = self.opening_balance or 0.0
+
+        if not self.is_new() and not getattr(self.flags, "allow_opening_balance_edit", False):
             old_doc = self.get_doc_before_save()
             if old_doc and float(old_doc.opening_balance or 0) != float(self.opening_balance or 0):
                 if frappe.db.exists("Invoice", {"customer_id": self.name}):
@@ -27,6 +30,10 @@ class Customer(Document):
 
         if check_customer_links(self.name):
             frappe.throw("This Customer has linked records and cannot be modified.")
+
+    def on_update(self):
+        from company.company.api import sync_customer_opening_balance_logs
+        sync_customer_opening_balance_logs(self.name)
 
     def on_trash(self):
         if check_customer_links(self.name):

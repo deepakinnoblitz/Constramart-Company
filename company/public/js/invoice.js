@@ -27,9 +27,12 @@ frappe.ui.form.on("Invoice", {
             });
         }
 
-        // Live discount listeners
+        // Live discount & advance listeners
         $(frm.fields_dict.overall_discount.input).on("input", () => calculate_totals_live(frm));
         $(frm.fields_dict.overall_discount_type.input).on("change", () => calculate_totals_live(frm));
+        if (frm.fields_dict.advance_amount_paid && frm.fields_dict.advance_amount_paid.input) {
+            $(frm.fields_dict.advance_amount_paid.input).on("input", () => calculate_totals_live(frm));
+        }
 
         // Child table listeners
         frm.fields_dict.table_qecz.grid.wrapper.on(
@@ -237,7 +240,10 @@ window.calculate_totals_live = function calculate_totals_live(frm) {
     // Also update balance_amount in UI if it exists
     if (frm.fields_dict.balance_amount) {
         let paid_received = flt(frm.doc.received_amount || 0, 2);
-        frm.set_value('balance_amount', flt(final_gt - paid_received, 2));
+        let adv_paid = flt(frm.doc.advance_amount_paid || 0, 2);
+        let net_adv = (paid_received >= adv_paid && adv_paid > 0) ? 0 : adv_paid;
+        let new_bal = Math.max(0, flt(final_gt - paid_received - net_adv, 2));
+        frm.set_value('balance_amount', new_bal);
     }
 
     // Explicitly refresh fields to ensure UI update

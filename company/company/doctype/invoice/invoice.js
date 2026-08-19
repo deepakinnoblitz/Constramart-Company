@@ -40,6 +40,17 @@ frappe.ui.form.on("Invoice", {
             }
         );
 
+        // SMART LIVE REFRESH for Advance Amount Paid
+        if (frm.fields_dict.advance_amount_paid && frm.fields_dict.advance_amount_paid.input) {
+            $(frm.fields_dict.advance_amount_paid.input).off("input.adv_live").on("input.adv_live", function () {
+                let val = flt($(this).val());
+                frm.doc.advance_amount_paid = val;
+                if (window.calculate_totals_live) {
+                    window.calculate_totals_live(frm);
+                }
+            });
+        }
+
         // Lock Purchase ID after save to prevent breaking the link
         if (!frm.is_new()) {
             frm.set_df_property("purchase_id", "read_only", 1);
@@ -55,6 +66,7 @@ frappe.ui.form.on("Invoice", {
         }
 
         // Lock form if collections exist
+        frm.set_intro(null);
         if (!frm.is_new()) {
             frappe.db.count("Invoice Collection", { filters: { invoice: frm.doc.name } }).then(count => {
                 if (count > 0) {
@@ -168,6 +180,13 @@ frappe.ui.form.on("Invoice", {
     advance_amount_paid(frm) {
         if (window.calculate_totals_live) {
             window.calculate_totals_live(frm);
+        }
+    },
+    after_save(frm) {
+        if (flt(frm.doc.advance_amount_paid) > 0) {
+            setTimeout(() => {
+                frm.reload_doc();
+            }, 300);
         }
     },
     client_name(frm) {

@@ -12,6 +12,10 @@ frappe.ui.form.on("Customer", {
         });
     },
 
+    after_save(frm) {
+        frm.reload_doc();
+    },
+
     refresh(frm) {
         frm.trigger("lock_based_on_links");
 
@@ -45,9 +49,56 @@ frappe.ui.form.on("Customer", {
                 if (count > 0) {
                     frm.set_df_property("opening_balance", "read_only", 1);
                     frm.set_intro(__("Opening Balance is locked because Sales Bills (Invoices) exist for this customer. Updates occur automatically via transactions."), "blue");
+
+                    // Add Opening Balance action button ONLY when Customer Opening Balance is locked
+                    frm.add_custom_button(__("Add Opening Balance"), () => {
+                        frm.trigger("prompt_add_opening_balance");
+                    });
+                } else {
+                    frm.set_df_property("opening_balance", "read_only", 0);
+                    frm.set_intro(null);
                 }
             });
         }
+    },
+
+    prompt_add_opening_balance(frm) {
+        frappe.prompt([
+            {
+                fieldname: "amount",
+                fieldtype: "Currency",
+                label: __("Opening Balance Amount to Add"),
+                reqd: 1
+            },
+            {
+                fieldname: "remarks",
+                fieldtype: "Small Text",
+                label: __("Remarks"),
+                default: "Additional Opening Balance added"
+            }
+        ], function (values) {
+            if (flt(values.amount) <= 0) {
+                frappe.msgprint(__("Amount must be greater than 0"));
+                return;
+            }
+            frappe.call({
+                method: "company.company.api.add_customer_opening_balance",
+                args: {
+                    customer_id: frm.doc.name,
+                    amount: values.amount,
+                    remarks: values.remarks
+                },
+                callback: function (r) {
+                    if (r.message) {
+                        frappe.show_alert({
+                            message: __("Added ₹{0} to Opening Balance", [format_currency(values.amount)]),
+                            indicator: "green"
+                        });
+                        frm.reload_doc();
+                    }
+                }
+            });
+        }, __("Add Opening Balance"), __("Add Amount"));
     },
 
     render_location_trash_icons(frm) {

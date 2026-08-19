@@ -24,6 +24,9 @@ class Invoice(Document):
                     frappe.bold(item.idx)
                 ))
 
+        if flt(self.advance_amount_paid) > 0 and not self.advance_payment_type:
+            self.advance_payment_type = "CASH RECEIVED"
+
         self.validate_purchase_link()
         self.calculate_child_rows()
         self.calculate_totals()
@@ -38,42 +41,28 @@ class Invoice(Document):
             if not purchase_data:
                 return
 
-            existing_invoice = purchase_data.reference_invoice or purchase_data.invoice_id
+            ref_inv = purchase_data.get("reference_invoice")
+            inv_id = purchase_data.get("invoice_id")
 
-            if existing_invoice and existing_invoice != self.name:
-                # Fetch Names for better display
-                purchase_vendor = frappe.db.get_value("Purchase", self.purchase_id, "vendor_name")
-                invoice_name = frappe.db.get_value("Invoice", existing_invoice, "customer_name")
-
-                frappe.throw(
-                    _("Purchase {0} ({1}) is already linked to Invoice {2} ({3}). Please select a different Purchase.").format(
-                        frappe.bold(self.purchase_id),
-                        frappe.bold(purchase_vendor or "Unknown"),
-                        frappe.bold(existing_invoice),
-                        frappe.bold(invoice_name or "Unknown")
-                    )
-                )
+            # If either field points to another invoice (not this one), throw error
+            if (ref_inv and ref_inv != self.name) or (inv_id and inv_id != self.name):
+                linked_to = ref_inv or inv_id
+                frappe.throw(_("Purchase {0} is already linked to Invoice {1}.").format(
+                    frappe.bold(self.purchase_id),
+                    frappe.bold(linked_to)
+                ))
 
     def ensure_no_linked_collections(self):
-        """Prevent editing or deleting if Invoice Collection entries exist"""
-        collections = frappe.db.count("Invoice Collection", {"invoice": self.name})
-        if collections > 0:
-            frappe.throw(
-                _("Cannot modify Invoice {0} because {1} Payment Collection(s) exist. "
-                "Please delete the Payment Collections before modifying this Invoice.").format(
-                    frappe.bold(self.name), 
-                    frappe.bold(collections)
-                )
-            )
+        # Prevent editing an Invoice if non-advance collections have been recorded
+        collection_count = frappe.db.count("Invoice Collection", {
+            "invoice": self.name,
+            "is_advance": ["!=", 1]
+        })
+        if collection_count > 0:
+            frappe.throw(_("This Invoice is locked because {0} Payment Collection(s) have been recorded. To edit this Invoice, please delete the linked collections first.").format(collection_count))
 
     def on_trash(self):
-        self.ensure_no_linked_collections()
-        
-        # Clear Purchase reference when Invoice is deleted
-        if self.purchase_id:
-            frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", None)
-            
-        # Update Customer status when deleting invoice
+        # Update customer_status if needed
         if self.customer_id:
             remaining_count = frappe.db.count("Invoice", filters={
                 "customer_id": self.customer_id,
@@ -142,8 +131,10 @@ class Invoice(Document):
         self.grand_total = total + (flt(self.roundoff) if hasattr(self, 'roundoff') else 0)
 
         # Sync Balance Amount considering direct advance_amount_paid
-        adv_paid = flt(self.advance_amount_paid)
-        self.balance_amount = max(0.0, flt(self.grand_total) - flt(self.received_amount) - adv_paid)
+        paid_rec = flt(self.received_amount or 0)
+        adv_paid = flt(self.advance_amount_paid or 0)
+        net_adv = 0.0 if (paid_rec >= adv_paid and adv_paid > 0) else adv_paid
+        self.balance_amount = max(0.0, flt(self.grand_total) - paid_rec - net_adv)
 
     def handle_new_location(self):
         if getattr(self, "is_new_location", 0):
@@ -157,8 +148,45 @@ class Invoice(Document):
                 # Clear flag so it doesn't try to add again
                 self.is_new_location = 0
 
+    def sync_advance_collection(self):
+        """Create or update advance collection record on save"""
+        if self.is_new():
+            return
+            
+        adv_paid = flt(self.advance_amount_paid)
+        payment_mode = getattr(self, "advance_payment_type", None) or "CASH RECEIVED"
+        
+        adv_name = frappe.db.get_value("Invoice Collection", {
+            "invoice": self.name,
+            "is_advance": 1
+        }, "name")
+
+        if adv_paid > 0:
+            if not adv_name:
+                adv_coll = frappe.get_doc({
+                    "doctype": "Invoice Collection",
+                    "invoice": self.name,
+                    "customer_id": self.customer_id,
+                    "collection_date": self.invoice_date or frappe.utils.today(),
+                    "amount_to_pay": self.grand_total,
+                    "amount_collected": adv_paid,
+                    "mode_of_payment": payment_mode,
+                    "is_advance": 1,
+                    "business_person": self.business_person_name,
+                    "remarks": f"Advance payment recorded on Sales Bill {self.name}"
+                })
+                adv_coll.insert(ignore_permissions=True)
+            else:
+                adv_coll = frappe.get_doc("Invoice Collection", adv_name)
+                if adv_coll.amount_collected != adv_paid or adv_coll.mode_of_payment != payment_mode:
+                    adv_coll.amount_collected = adv_paid
+                    adv_coll.mode_of_payment = payment_mode
+                    adv_coll.save(ignore_permissions=True)
+        elif adv_name:
+            frappe.delete_doc("Invoice Collection", adv_name, ignore_permissions=True)
+
     def on_update(self):
-        """Ensure Purchase reference is synchronized with this Invoice"""
+        """Ensure Purchase reference is synchronized with this Invoice and Advance Collection is synced"""
         if self.purchase_id:
             # Set this Invoice as the reference on the linked Purchase
             frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
@@ -167,31 +195,15 @@ class Invoice(Document):
             old_doc = self.get_doc_before_save()
             if old_doc and old_doc.purchase_id:
                 frappe.db.set_value("Purchase", old_doc.purchase_id, "reference_invoice", None)
+
+        self.sync_advance_collection()
     
     def after_insert(self):
         # Update Purchase with Invoice reference
         if self.purchase_id:
             frappe.db.set_value("Purchase", self.purchase_id, "reference_invoice", self.name)
             
-        # Create advance collection if advance_amount_paid > 0
-        if flt(self.advance_amount_paid) > 0 and getattr(self, "advance_payment_type", None):
-            adv_exists = frappe.db.exists("Invoice Collection", {
-                "invoice": self.name,
-                "is_advance": 1
-            })
-            if not adv_exists:
-                adv_coll = frappe.get_doc({
-                    "doctype": "Invoice Collection",
-                    "invoice": self.name,
-                    "customer_id": self.customer_id,
-                    "collection_date": self.invoice_date or frappe.utils.today(),
-                    "amount_collected": self.advance_amount_paid,
-                    "mode_of_payment": self.advance_payment_type,
-                    "is_advance": 1,
-                    "business_person": self.business_person_name,
-                    "remarks": f"Advance payment recorded on Sales Bill {self.name}"
-                })
-                adv_coll.insert(ignore_permissions=True)
+        self.sync_advance_collection()
 
         # Update Customer status on 2nd invoice creation
         if self.customer_id:
@@ -239,9 +251,6 @@ def add_customer_location(customer, location_name, address=None):
         return True
     
     return False
-
-
-
 
 
 @frappe.whitelist()

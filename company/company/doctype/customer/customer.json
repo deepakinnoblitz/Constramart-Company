@@ -5,6 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "customer_details_tab",
   "section_break_zxuz",
   "business_person_name",
   "column_break_azbu",
@@ -23,12 +24,15 @@
   "city",
   "billing_address",
   "remarks",
-  "opening_balance",
-  "total_advance_amount",
   "section_break_ngli",
   "location",
   "section_break_spsn",
-  "owner_name"
+  "owner_name",
+  "opening_balance_details_tab",
+  "opening_balance",
+  "initial_opening_balance",
+  "total_advance_amount",
+  "opening_balance_logs"
  ],
  "fields": [
   {
@@ -92,6 +96,15 @@
    "in_list_view": 1,
    "label": "Opening Balance",
    "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "initial_opening_balance",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Initial Opening Balance",
+   "precision": "2",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -179,12 +192,29 @@
   {
    "fieldname": "column_break_azbu",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Customer Details"
+  },
+  {
+   "fieldname": "opening_balance_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Opening Balance Details"
+  },
+  {
+   "fieldname": "opening_balance_logs",
+   "fieldtype": "Table",
+   "label": "Opening Balance Usage Log",
+   "options": "Customer Opening Balance Log",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-14 14:51:59.045925",
+ "modified": "2026-08-19 10:47:10.317883",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Customer",
