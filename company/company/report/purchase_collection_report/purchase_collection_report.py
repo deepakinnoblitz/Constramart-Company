@@ -111,6 +111,12 @@ def get_columns():
             "width": 180,
         },
         {
+            "label": "Is Advance",
+            "fieldname": "is_advance_label",
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
             "label": "Grand Purchase Total",
             "fieldname": "grand_total",
             "fieldtype": "Currency",
@@ -207,6 +213,7 @@ def get_data(filters):
             pc.vendor_name,
             pc.payment_date,
             pc.mode_of_payment,
+            pc.is_advance,
             p.grand_total,
             pc.amount_paid,
             bp.business_person_name AS business_person,
@@ -222,6 +229,12 @@ def get_data(filters):
     purchase_running_total = {}
 
     for d in raw_results:
+        is_adv = flt(d.get("is_advance")) == 1
+        if is_adv:
+            d.is_advance_label = '''<span style="background-color: #8b5cf6; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; line-height: 1; letter-spacing: 0.5px;">ADVANCE</span>'''.strip()
+        else:
+            d.is_advance_label = '''<span style="background-color: #6b7280; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; line-height: 1; letter-spacing: 0.5px;">REGULAR</span>'''.strip()
+
         purchase_id = d.purchase
         if purchase_id not in purchase_running_total:
             purchase_running_total[purchase_id] = 0.0

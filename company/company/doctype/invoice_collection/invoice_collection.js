@@ -34,7 +34,7 @@ frappe.ui.form.on("Invoice Collection", {
     refresh(frm) {
         toggle_advance_field(frm);
 
-        if (!frm.is_new()) {
+        if (!frm.is_new() && !frm.doc.is_advance) {
             // Check if this is the last collection for the invoice
             frappe.call({
                 method: "frappe.client.get_list",
@@ -71,6 +71,9 @@ frappe.ui.form.on("Invoice Collection", {
                 }
             });
         }
+
+        // Hide Opening Balance Details section for Advance Collections
+        frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
 
         // Lock Advance Payment collections from manual editing
         if (!frm.is_new() && frm.doc.is_advance) {
@@ -243,6 +246,8 @@ function recalculate_breakdown(frm) {
     const pay = flt(frm.doc.amount_to_pay);
     const avail_adv = flt(frm.doc.available_advance);
     const avail_ob = flt(frm.doc.available_opening_balance);
+
+    frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
 
     if (frm.doc.is_advance) {
         const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);

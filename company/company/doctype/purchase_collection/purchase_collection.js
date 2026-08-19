@@ -34,7 +34,7 @@ frappe.ui.form.on("Purchase Collection", {
     refresh(frm) {
         toggle_advance_field(frm);
 
-        if (!frm.is_new()) {
+        if (!frm.is_new() && !frm.doc.is_advance) {
             // Check if this is the last collection for the purchase order
             frappe.call({
                 method: "frappe.client.get_list",
@@ -70,6 +70,10 @@ frappe.ui.form.on("Purchase Collection", {
                 }
             });
         }
+
+        // Hide Opening Balance Details section for Advance Collections and show Advance Payment Details ONLY for Advance Docs
+        frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
+        frm.set_df_property("advance_payment_details_section", "hidden", frm.doc.is_advance ? 0 : 1);
 
         // Lock Advance Payment collections from manual editing
         if (!frm.is_new() && frm.doc.is_advance) {
@@ -240,6 +244,8 @@ function recalculate_breakdown(frm) {
     const avail_adv = flt(frm.doc.available_advance);
     const avail_ob = flt(frm.doc.available_opening_balance);
 
+    frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
+
     if (frm.doc.is_advance) {
         const paid = flt(frm.doc.amount_paid_normally || frm.doc.amount_paid);
         frm.set_value("advance_adjusted", paid);
@@ -250,10 +256,6 @@ function recalculate_breakdown(frm) {
         frm.set_value("amount_pending", Math.max(0, pay - paid));
         return;
     }
-
-    // Hide Advance fields
-    frm.set_df_property("available_advance", "hidden", 1);
-    frm.set_df_property("advance_adjusted", "hidden", 1);
 
     // Step 1: Advance Adjustment
     const adv_adj = Math.min(avail_adv, pay);
@@ -289,6 +291,11 @@ function recalculate_breakdown(frm) {
 }
 
 function toggle_advance_field(frm) {
+    if (frm.doc.is_advance) {
+        frm.set_df_property("is_advance", "hidden", 0);
+        return;
+    }
+
     if (frm.is_new()) {
         frm.set_df_property("is_advance", "hidden", 1);
         return;

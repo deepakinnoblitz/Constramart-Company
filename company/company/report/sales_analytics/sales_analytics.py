@@ -42,6 +42,7 @@ def execute(filters=None):
         {"fieldname": "total_tax_amount", "label": "Total Tax", "fieldtype": "Currency", "width": 120},
         {"fieldname": "grand_total", "label": "Invoice Total", "fieldtype": "Currency", "width": 140},
         {"fieldname": "overall_discount", "label": "Discount", "fieldtype": "Currency", "width": 120},
+        {"fieldname": "advance_amount_paid", "label": "Advance Amount", "fieldtype": "Currency", "width": 140},
         {"fieldname": "received_amount", "label": "Received", "fieldtype": "Currency", "width": 130},
         {"fieldname": "balance_amount", "label": "Pending", "fieldtype": "Currency", "width": 130},
         {"fieldname": "business_person_name", "label": "Business Person", "fieldtype": "Link", "options": "Business Person", "width": 150},
@@ -127,6 +128,7 @@ def execute(filters=None):
             inv.total_amount,
             inv.overall_discount,
             inv.overall_discount_type,
+            inv.advance_amount_paid,
             inv.received_amount,
             inv.balance_amount
         FROM `tabInvoice` inv
@@ -221,6 +223,7 @@ def execute(filters=None):
         f"""
         SELECT
             SUM(inv.grand_total) AS total_sales,
+            SUM(inv.advance_amount_paid) AS total_advance,
             SUM(inv.received_amount) AS total_received,
             SUM(inv.balance_amount) AS total_pending,
             SUM(CASE 
@@ -242,6 +245,7 @@ def execute(filters=None):
     )[0]
 
     total_sales = totals.total_sales or 0
+    total_advance = totals.total_advance or 0
     total_tax = totals.total_tax or 0
     total_excl = totals.total_excl or 0
     total_received = totals.total_received or 0
@@ -277,6 +281,12 @@ def execute(filters=None):
             "value": totals.total_discount or 0,
             "datatype": "Currency",
             "indicator": "red"
+        },
+        {
+            "label": "Total Advance",
+            "value": total_advance,
+            "datatype": "Currency",
+            "indicator": "green"
         },
         {
             "label": "Received",
