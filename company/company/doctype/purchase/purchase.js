@@ -74,6 +74,7 @@ frappe.ui.form.on("Purchase", {
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Purchase Collection", { filters: { purchase: frm.doc.name } }).then(count => {
+                frm.set_intro(null);
                 if (count > 0) {
                     frm.set_read_only();
                     frm.disable_save();

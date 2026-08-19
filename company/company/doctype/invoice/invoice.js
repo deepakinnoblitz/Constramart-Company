@@ -66,9 +66,9 @@ frappe.ui.form.on("Invoice", {
         }
 
         // Lock form if collections exist
-        frm.set_intro(null);
         if (!frm.is_new()) {
             frappe.db.count("Invoice Collection", { filters: { invoice: frm.doc.name } }).then(count => {
+                frm.set_intro(null);
                 if (count > 0) {
                     frm.set_read_only();
                     frm.disable_save();

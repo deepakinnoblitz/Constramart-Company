@@ -246,8 +246,6 @@ function recalculate_breakdown(frm) {
         const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);
         frm.set_value("amount_collected", collected);
         frm.set_value("amount_pending", Math.max(0, pay - collected));
-        frm.set_df_property("available_advance", "hidden", 0);
-        frm.set_df_property("advance_adjusted", "hidden", 0);
         return;
     }
 
@@ -255,11 +253,6 @@ function recalculate_breakdown(frm) {
     const adv_adj = Math.min(avail_adv, pay);
     frm.set_value("advance_adjusted", adv_adj);
     let rem_after_adv = pay - adv_adj;
-
-    // Conditionally hide Advance fields if no advance balance exists or adjusted
-    const show_adv_fields = (avail_adv > 0 || adv_adj > 0);
-    frm.set_df_property("available_advance", "hidden", show_adv_fields ? 0 : 1);
-    frm.set_df_property("advance_adjusted", "hidden", show_adv_fields ? 0 : 1);
 
     // Step 2: Opening Balance Deduction
     let ob_deducted = 0;

@@ -163,6 +163,60 @@ def validate_invoice_collection(doc, method):
             f"Remaining Balance: {invoice.grand_total - already_collected}"
         )
 
+
+def validate_purchase_collection(doc, method):
+    """Validate that total purchase collection does not exceed Grand Total of Purchase"""
+    if not doc.purchase:
+        return
+
+    purchase = frappe.db.get_value("Purchase", doc.purchase, ["grand_total"], as_dict=True)
+    if not purchase:
+        return
+
+    already_paid = frappe.db.sql("""
+        SELECT SUM(amount_paid + advance_adjusted - excess_amount)
+        FROM `tabPurchase Collection`
+        WHERE purchase=%s AND name != %s
+    """, (doc.purchase, doc.name or ""))[0][0] or 0
+
+    trying_to_add = flt(doc.amount_paid) + flt(doc.advance_adjusted) - flt(doc.excess_amount)
+    new_total = flt(already_paid) + trying_to_add
+
+    if new_total > flt(purchase.grand_total) + 0.01:
+        frappe.throw(
+            f"Collection exceeds Purchase Amount.<br><br>"
+            f"Grand Total: {purchase.grand_total}<br>"
+            f"Already Paid: {already_paid}<br>"
+            f"Trying to Add: {trying_to_add}<br><br>"
+            f"Remaining Balance: {purchase.grand_total - already_paid}"
+        )
+
+
+def update_purchase_collection_amounts(doc, method):
+    """Update paid_amount and balance_amount in Purchase whenever a Purchase Collection is inserted/updated/deleted."""
+    if not doc.purchase:
+        return
+
+    purchase = frappe.get_doc("Purchase", doc.purchase)
+    total_applied = flt(frappe.db.sql("""
+        SELECT SUM(amount_paid + advance_adjusted - excess_amount)
+        FROM `tabPurchase Collection`
+        WHERE purchase = %s
+    """, (doc.purchase,))[0][0] or 0)
+
+    grand_total = flt(purchase.grand_total)
+    balance = max(0.0, grand_total - total_applied)
+    status = "Pending" if total_applied == 0 else ("Partially Paid" if balance > 0 else "Fully Paid")
+
+    frappe.db.set_value("Purchase", doc.purchase, {
+        "paid_amount": total_applied,
+        "balance_amount": balance,
+        "purchase_status": status
+    })
+
+    if doc.vendor_id or purchase.vendor_id:
+        sync_customer_opening_balance_logs(doc.vendor_id or purchase.vendor_id)
+
 @frappe.whitelist()
 def get_todays_followups():
     today = frappe.utils.today()  # '2025-09-23'
@@ -2715,14 +2769,20 @@ def sync_customer_opening_balance_logs(customer_id):
         WHERE parent = %s AND transaction_type = 'Opening Balance Addition'
     """, customer_id, as_dict=True)
 
-    # 2. Fetch all collections affecting OB chronologically
-    collections = frappe.db.sql("""
-        SELECT name, collection_date as date, invoice, opening_balance_deduction, excess_amount, creation, 'Collection' as tx_kind
+    # 2. Fetch all collections (Sales & Purchase) affecting OB chronologically
+    sales_collections = frappe.db.sql("""
+        SELECT name, collection_date as date, invoice as doc_ref, opening_balance_deduction, excess_amount, creation, 'Sales Collection' as tx_kind
         FROM `tabInvoice Collection`
         WHERE customer_id = %s AND (opening_balance_deduction > 0 OR excess_amount > 0)
     """, customer_id, as_dict=True)
 
-    all_tx = list(manual_additions) + list(collections)
+    purc_collections = frappe.db.sql("""
+        SELECT name, payment_date as date, purchase as doc_ref, opening_balance_deduction, excess_amount, creation, 'Purchase Collection' as tx_kind
+        FROM `tabPurchase Collection`
+        WHERE vendor_id = %s AND (opening_balance_deduction > 0 OR excess_amount > 0)
+    """, customer_id, as_dict=True)
+
+    all_tx = list(manual_additions) + list(sales_collections) + list(purc_collections)
     created_date = frappe.utils.getdate(cust_data.get("creation")) if cust_data.get("creation") else frappe.utils.today()
     all_tx.sort(key=lambda x: (
         frappe.utils.getdate(x.date) if x.date else created_date,
@@ -2781,9 +2841,11 @@ def sync_customer_opening_balance_logs(customer_id):
             log_entry.insert(ignore_permissions=True)
             logs.append(log_entry.as_dict())
             idx += 1
-        elif tx.tx_kind == "Collection":
+        elif tx.tx_kind in ["Sales Collection", "Purchase Collection"]:
             deducted = float(tx.opening_balance_deduction or 0)
             excess = float(tx.excess_amount or 0)
+            v_type = "Invoice Collection" if tx.tx_kind == "Sales Collection" else "Purchase Collection"
+            label_prefix = "Sales Collection" if tx.tx_kind == "Sales Collection" else "Purchase Collection"
 
             if deducted > 0:
                 running_balance -= deducted
@@ -2794,13 +2856,13 @@ def sync_customer_opening_balance_logs(customer_id):
                     "parentfield": "opening_balance_logs",
                     "idx": idx,
                     "date": tx.date,
-                    "transaction_type": "Sales Collection OB Deduction",
-                    "voucher_type": "Invoice Collection",
+                    "transaction_type": f"{label_prefix} OB Deduction",
+                    "voucher_type": v_type,
                     "voucher_no": tx.name,
                     "debit": deducted,
                     "credit": 0.0,
                     "balance": running_balance,
-                    "remarks": f"Used for Invoice {tx.invoice or ''}"
+                    "remarks": f"Used for {tx.doc_ref or ''}"
                 })
                 log_entry.insert(ignore_permissions=True)
                 logs.append(log_entry.as_dict())
@@ -2816,12 +2878,12 @@ def sync_customer_opening_balance_logs(customer_id):
                     "idx": idx,
                     "date": tx.date,
                     "transaction_type": "Excess Collection Credit",
-                    "voucher_type": "Invoice Collection",
+                    "voucher_type": v_type,
                     "voucher_no": tx.name,
                     "debit": 0.0,
                     "credit": excess,
                     "balance": running_balance,
-                    "remarks": f"Excess collection from Invoice {tx.invoice or ''}"
+                    "remarks": f"Excess payment from {tx.doc_ref or ''}"
                 })
                 log_entry.insert(ignore_permissions=True)
                 logs.append(log_entry.as_dict())

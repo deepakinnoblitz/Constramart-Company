@@ -43,12 +43,16 @@ frappe.ui.form.on("Customer", {
         frm.trigger("set_city_state");
         frm.trigger("render_location_trash_icons");
 
-        // 🔒 Lock Opening Balance if Sales Bills (Invoices) exist
+        // 🔒 Lock Opening Balance if Sales Bills (Invoices) or Purchase Bills exist
         if (!frm.is_new() && frm.doc.name) {
-            frappe.db.count("Invoice", { filters: { customer_id: frm.doc.name } }).then(count => {
-                if (count > 0) {
+            Promise.all([
+                frappe.db.count("Invoice", { filters: { customer_id: frm.doc.name } }),
+                frappe.db.count("Purchase", { filters: { vendor_id: frm.doc.name } })
+            ]).then(([inv_count, purc_count]) => {
+                const total_bills = inv_count + purc_count;
+                if (total_bills > 0) {
                     frm.set_df_property("opening_balance", "read_only", 1);
-                    frm.set_intro(__("Customer Edit and Opening Balance is locked because Sales Bills (Invoices) exist for this customer. Updates occur automatically via transactions."), "blue");
+                    frm.set_intro(__("Customer Edit and Opening Balance is locked because Sales/Purchase Bills exist for this customer. Updates occur automatically via transactions."), "blue");
 
                     // Add Opening Balance action button ONLY when Customer Opening Balance is locked
                     frm.add_custom_button(__("Add Opening Balance"), () => {
