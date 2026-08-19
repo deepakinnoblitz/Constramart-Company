@@ -3151,6 +3151,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             COALESCE(inv.overall_discount_type, '') as overall_discount_type,
             COALESCE(inv.overall_discount, 0) as overall_discount,
             COALESCE(inv.grand_total, 0) as grand_total,
+            COALESCE(inv.advance_amount_paid, 0) as advance_amount_paid,
             COALESCE(inv.received_amount, 0) as received_amount,
             COALESCE(inv.balance_amount, 0) as balance_amount
         FROM `tabInvoice` inv
@@ -3194,6 +3195,7 @@ def export_sales_itemized_excel(filters=None, names=None):
         "Overall Discount Type",
         "Overall Discount",
         "Grand Total",
+        "Advance Amount Paid",
         "Received Amount",
         "Balance Amount"
     ]
@@ -3272,6 +3274,7 @@ def export_sales_itemized_excel(filters=None, names=None):
                 format_excel_str(row.overall_discount_type),
                 float(row.overall_discount or 0),
                 float(row.grand_total or 0),
+                float(row.advance_amount_paid or 0),
                 float(row.received_amount or 0),
                 float(row.balance_amount or 0)
             ])
@@ -3423,6 +3426,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             COALESCE(pur.overall_discount_type, '') as overall_discount_type,
             COALESCE(pur.overall_discount, 0) as overall_discount,
             COALESCE(pur.grand_total, 0) as grand_total,
+            COALESCE(pur.advance_amount_paid, 0) as advance_amount_paid,
             COALESCE(pur.paid_amount, 0) as paid_amount,
             COALESCE(pur.balance_amount, 0) as balance_amount
         FROM `tabPurchase` pur
@@ -3463,6 +3467,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
         "Overall Discount Type",
         "Overall Discount",
         "Grand Total",
+        "Advance Amount Paid",
         "Paid Amount",
         "Balance Amount"
     ]
@@ -3538,6 +3543,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
                 format_excel_str(row.overall_discount_type),
                 float(row.overall_discount or 0),
                 float(row.grand_total or 0),
+                float(row.advance_amount_paid or 0),
                 float(row.paid_amount or 0),
                 float(row.balance_amount or 0)
             ])

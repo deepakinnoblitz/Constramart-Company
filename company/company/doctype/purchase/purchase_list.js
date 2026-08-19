@@ -131,7 +131,7 @@ frappe.listview_settings['Purchase'] = {
                     frappe.confirm(
                         __('Are you sure you want to download <b>{0} Purchase(s)</b> to Excel?', [pur_count]),
                         function () {
-                            frappe.freeze(__('Generating Excel Report, please wait...'));
+                            frappe.dom.freeze(__('Generating Excel Report, please wait...'));
 
                             fetch('/api/method/company.company.api.export_purchase_itemized_excel', {
                                 method: 'POST',
@@ -146,7 +146,7 @@ frappe.listview_settings['Purchase'] = {
                             })
                             .then(response => response.blob())
                             .then(blob => {
-                                frappe.unfreeze();
+                                frappe.dom.unfreeze();
                                 let url = window.URL.createObjectURL(blob);
                                 let a = document.createElement('a');
                                 a.href = url;
@@ -158,7 +158,7 @@ frappe.listview_settings['Purchase'] = {
                                 frappe.show_alert({ message: __('Excel Report downloaded successfully!'), indicator: 'green' });
                             })
                             .catch(err => {
-                                frappe.unfreeze();
+                                frappe.dom.unfreeze();
                                 frappe.msgprint(__('Failed to generate Excel report. Please try again.'));
                             });
                         }
