@@ -2757,10 +2757,11 @@ def sync_customer_opening_balance_logs(customer_id):
         return []
     
     cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance", "creation"], as_dict=True) or {}
-    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
     
-    if not cust_data.get("initial_opening_balance") and init_ob > 0:
-        frappe.db.set_value("Customer", customer_id, "initial_opening_balance", init_ob, update_modified=False)
+    raw_init_ob = cust_data.get("initial_opening_balance")
+    if raw_init_ob is None:
+        raw_init_ob = cust_data.get("opening_balance")
+    init_ob = float(raw_init_ob or 0.0)
 
     # 1. Fetch existing manual "Opening Balance Addition" entries to preserve them
     manual_additions = frappe.db.sql("""
@@ -2768,6 +2769,13 @@ def sync_customer_opening_balance_logs(customer_id):
         FROM `tabCustomer Opening Balance Log`
         WHERE parent = %s AND transaction_type = 'Opening Balance Addition'
     """, customer_id, as_dict=True)
+
+    # Prevent double-counting: if initial_opening_balance was corrupted by matching manual addition credit, reset it to 0.0
+    if manual_additions and init_ob > 0:
+        total_addition_credit = sum(float(a.credit or 0) for a in manual_additions)
+        if init_ob == total_addition_credit:
+            init_ob = 0.0
+            frappe.db.set_value("Customer", customer_id, "initial_opening_balance", 0.0, update_modified=False)
 
     # 2. Fetch all collections (Sales & Purchase) affecting OB chronologically
     sales_collections = frappe.db.sql("""
