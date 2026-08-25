@@ -36,23 +36,15 @@ class InvoiceCollection(Document):
 
 		self.customer_id = customer_id
 
-		# Fetch Customer Available Opening Balance (from initial OB minus other collections)
-		cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance"], as_dict=True) or {}
-		init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
-
-		other_ob_deducted = frappe.db.sql("""
-			SELECT COALESCE(SUM(opening_balance_deduction), 0)
-			FROM `tabInvoice Collection`
-			WHERE customer_id = %s AND name != %s
-		""", (customer_id, self.name or ""))[0][0] or 0
-
-		other_excess = frappe.db.sql("""
-			SELECT COALESCE(SUM(excess_amount), 0)
-			FROM `tabInvoice Collection`
-			WHERE customer_id = %s AND name != %s
-		""", (customer_id, self.name or ""))[0][0] or 0
-
-		self.available_opening_balance = max(0.0, init_ob - float(other_ob_deducted) + float(other_excess))
+		# Fetch Customer Available Opening Balance from live Customer.opening_balance
+		cust_current_ob = float(frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0)
+		if self.is_new():
+			self.available_opening_balance = max(0.0, cust_current_ob)
+		else:
+			old_doc = self.get_doc_before_save()
+			old_ded = float(old_doc.opening_balance_deduction or 0.0) if old_doc else 0.0
+			old_exc = float(old_doc.excess_amount or 0.0) if old_doc else 0.0
+			self.available_opening_balance = max(0.0, cust_current_ob + old_ded - old_exc)
 
 		# Fetch Available Advance (Standalone unlinked advances only)
 		adv_collections = frappe.db.sql("""
@@ -88,9 +80,11 @@ class InvoiceCollection(Document):
 			self.advance_adjusted = min(avail_adv, pending_before)
 			rem_after_adv = pending_before - self.advance_adjusted
 
-			# 2. Opening Balance Deduction (Manual entry - does NOT auto-fetch max amount)
+			# 2. Opening Balance Deduction
 			if self.use_opening_balance:
 				current_ob = float(getattr(self, "opening_balance_deduction", 0.0) or 0.0)
+				if current_ob == 0 and self.available_opening_balance > 0 and rem_after_adv > 0:
+					current_ob = min(self.available_opening_balance, rem_after_adv)
 				ob_ded = min(self.available_opening_balance, min(rem_after_adv, current_ob))
 				self.opening_balance_deduction = ob_ded
 			else:

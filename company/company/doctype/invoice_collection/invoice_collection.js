@@ -162,7 +162,13 @@ frappe.ui.form.on("Invoice Collection", {
     },
 
     use_opening_balance(frm) {
-        if (!frm.doc.use_opening_balance) {
+        if (frm.doc.use_opening_balance) {
+            const avail_ob = flt(frm.doc.available_opening_balance);
+            const pay = flt(frm.doc.amount_to_pay);
+            const adv_adj = flt(frm.doc.advance_adjusted);
+            const max_allowed = Math.min(avail_ob, Math.max(0, pay - adv_adj));
+            frm.set_value("opening_balance_deduction", max_allowed);
+        } else {
             frm.set_value("opening_balance_deduction", 0);
             frm.set_value("amount_collected_using_opening_balance", 0);
         }
@@ -246,8 +252,8 @@ function recalculate_breakdown(frm) {
     const pay = flt(frm.doc.amount_to_pay);
     const avail_adv = flt(frm.doc.available_advance);
     const avail_ob = flt(frm.doc.available_opening_balance);
-
-    frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
+    const show_ob_section = !frm.doc.is_advance && (avail_ob > 0 || flt(frm.doc.opening_balance_deduction) > 0 || frm.doc.use_opening_balance == 1);
+    frm.set_df_property("opening_balance_details_section", "hidden", show_ob_section ? 0 : 1);
 
     if (frm.doc.is_advance) {
         const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);
@@ -268,7 +274,11 @@ function recalculate_breakdown(frm) {
     // Step 2: Opening Balance Deduction
     let ob_deducted = 0;
     if (frm.doc.use_opening_balance) {
-        let current_val = flt(frm.doc.opening_balance_deduction || 0);
+        let current_val = flt(frm.doc.opening_balance_deduction);
+        if (current_val === 0 && avail_ob > 0 && rem_after_adv > 0) {
+            current_val = Math.min(avail_ob, rem_after_adv);
+            frm.set_value("opening_balance_deduction", current_val);
+        }
         ob_deducted = Math.min(avail_ob, Math.min(rem_after_adv, current_val));
     } else {
         ob_deducted = 0;
@@ -294,6 +304,11 @@ function recalculate_breakdown(frm) {
 }
 
 function toggle_advance_field(frm) {
+    if (frm.doc.is_advance) {
+        frm.set_df_property("is_advance", "hidden", 0);
+        return;
+    }
+
     if (frm.is_new()) {
         // Hide Is Advance checkbox on new collection forms
         frm.set_df_property("is_advance", "hidden", 1);
@@ -318,11 +333,11 @@ function toggle_advance_field(frm) {
         },
         callback: function (r) {
             if (r.message > 0) {
-                // Invoice already has collections - hide and uncheck advance
-                frm.set_df_property("is_advance", "hidden", 1);
-                frm.set_value("is_advance", 0);
+                if (!frm.doc.is_advance) {
+                    frm.set_df_property("is_advance", "hidden", 1);
+                    frm.set_value("is_advance", 0);
+                }
             } else {
-                // First collection for this invoice - show advance checkbox
                 frm.set_df_property("is_advance", "hidden", 0);
             }
         }
