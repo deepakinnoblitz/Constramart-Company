@@ -75,6 +75,12 @@ def execute(filters=None):
             "width": 140,
         },
         {
+            "fieldname": "advance_amount_paid",
+            "label": "Advance Amount",
+            "fieldtype": "Currency",
+            "width": 140,
+        },
+        {
             "fieldname": "paid_amount",
             "label": "Paid Amount",
             "fieldtype": "Currency",
@@ -158,6 +164,7 @@ def execute(filters=None):
             SUM(i.tax_amount)   AS total_tax_amount,
             SUM(i.sub_total - i.tax_amount) AS amount_exclusive,
             p.grand_total,
+            p.advance_amount_paid,
             bp.business_person_name AS business_person_name,
             p.paid_amount,
             p.balance_amount,
@@ -217,6 +224,7 @@ def execute(filters=None):
     )[0]
 
     total_purchase = totals.total_purchase or 0
+    total_advance = totals.total_advance or 0
     total_tax = totals.total_tax or 0
     total_excl = totals.total_excl or 0
     total_paid = totals.total_paid or 0

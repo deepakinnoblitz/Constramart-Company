@@ -1,10 +1,14 @@
-// === Universal "Back" Button (Left of Print, Persistent across navigation) ===
+// === Universal "Back" Button (Instant Fast Render) ===
 
 function add_global_back_button(frm) {
-    if (!frm || !frm.page) return;
+    if (!frm || !frm.page || !frm.page.wrapper) return;
+
+    const $wrapper = frm.page.wrapper;
+    const $pageActions = $wrapper.find('.page-actions');
+    if (!$pageActions.length) return;
 
     // Prevent duplicates
-    if (frm.page.wrapper.find('.btn-back-global').length) return;
+    if ($pageActions.find('.btn-back-global').length) return;
 
     // Create Back button
     const backBtn = $(`
@@ -15,34 +19,22 @@ function add_global_back_button(frm) {
 
     // Click action
     backBtn.on('click', function() {
-        // Standard window.history.back is the most robust way to navigate back
-        // If we came from a list, this will take us back there correctly.
         if (window.history.length > 1) {
             window.history.back();
         } else if (frm.doctype) {
-            // Fallback: If no history, navigate to the List View
             frappe.set_route('List', frm.doctype);
         }
     });
 
-    // Find Print button to insert before
-    const $printBtn = frm.page.wrapper.find('.btn-print, .menu-btn-group .btn[data-original-title="Print"]');
-
+    // Insert immediately at the start of page-actions or before Print button
+    const $printBtn = $pageActions.find('.btn-print, .menu-btn-group .btn[data-original-title="Print"]');
     if ($printBtn.length) {
-        $printBtn.closest('div').prepend(backBtn); // Insert left of Print
+        $printBtn.closest('div').prepend(backBtn);
     } else {
-        // Fallback: if Print not yet rendered, retry after small delay
-        setTimeout(() => {
-            const $retryPrintBtn = frm.page.wrapper.find('.btn-print');
-            if ($retryPrintBtn.length) {
-                $retryPrintBtn.closest('div').prepend(backBtn);
-            } else {
-                frm.page.wrapper.find('.page-actions').prepend(backBtn);
-            }
-        }, 300);
+        $pageActions.prepend(backBtn);
     }
 
-    // For Quick Entry or Link dialogs
+    // Handle Quick Entry or Link dialogs
     if (frm.$wrapper && frm.$wrapper.closest('.modal-dialog').length) {
         const modalFooter = frm.$wrapper.closest('.modal-dialog').find('.modal-footer');
         if (!modalFooter.find('.btn-back-dialog').length) {
@@ -54,31 +46,20 @@ function add_global_back_button(frm) {
             modalFooter.prepend(backDialog);
         }
     }
-
-    frm.__back_button_added = true;
 }
 
-// --- Apply globally to all doctypes ---
+// --- Apply globally to all doctypes INSTANTLY ---
 frappe.ui.form.on('*', {
     refresh(frm) {
-        frappe.after_ajax(() => {
-            setTimeout(() => add_global_back_button(frm), 250);
-        });
+        add_global_back_button(frm);
+    },
+    onload_post_render(frm) {
+        add_global_back_button(frm);
     }
 });
 
-// --- Re-add after route change ---
-frappe.router.on('change', () => {
-    setTimeout(() => {
-        const cur_frm = frappe?.ui?.form?.get_cur_frm?.();
-        if (cur_frm) add_global_back_button(cur_frm);
-    }, 300);
-});
-
-// --- Re-add after browser back/forward navigation ---
-window.addEventListener('popstate', () => {
-    setTimeout(() => {
-        const cur_frm = frappe?.ui?.form?.get_cur_frm?.();
-        if (cur_frm) add_global_back_button(cur_frm);
-    }, 400);
+// Fast observer fallback in case page-actions renders asynchronously
+$(document).on('page-change', () => {
+    const cur_frm = frappe?.ui?.form?.get_cur_frm?.();
+    if (cur_frm) add_global_back_button(cur_frm);
 });

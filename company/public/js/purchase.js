@@ -70,6 +70,7 @@ frappe.ui.form.on("Purchase", {
     },
 
     overall_discount: function (frm) { purchase_calculate_totals_live(frm); },
+    advance_amount_paid: function (frm) { purchase_calculate_totals_live(frm); },
     overall_discount_type: function (frm) {
         // Explicitly clear discount if type is not Flat or Percentage
         if (frm.doc.overall_discount_type !== "Flat" && frm.doc.overall_discount_type !== "Percentage") {
@@ -203,6 +204,7 @@ window.purchase_calculate_totals_live = function (frm) {
     // Update balance_amount
     if (frm.fields_dict.balance_amount) {
         let paid = flt(frm.doc.paid_amount, 2);
+        let adv_paid = flt(frm.doc.advance_amount_paid || 0, 2);
 
         // Robustness 1: If model is 0 but UI field has value, trust the field
         if (paid === 0 && frm.fields_dict.paid_amount && flt(frm.fields_dict.paid_amount.get_value(), 2) > 0) {
@@ -217,10 +219,11 @@ window.purchase_calculate_totals_live = function (frm) {
             console.log("DEBUG: Deduced paid amount from doc state:", paid);
         }
 
-        let balance = flt(final_gt - paid, 2);
+        let net_adv = (paid >= adv_paid && adv_paid > 0) ? 0 : adv_paid;
+        let balance = Math.max(0, flt(final_gt - paid - net_adv, 2));
 
         // Log calculation for debugging
-        console.log("DEBUG: Balance Calculation -> GT:", final_gt, "Paid:", paid, "Result:", balance);
+        console.log("DEBUG: Balance Calculation -> GT:", final_gt, "Paid:", paid, "Adv:", net_adv, "Result:", balance);
 
         if (flt(frm.doc.balance_amount, 2) !== balance) {
             frm.set_value('balance_amount', balance);

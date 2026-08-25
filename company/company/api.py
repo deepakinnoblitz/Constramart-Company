@@ -99,7 +99,7 @@ def before_insert_invoice(doc, method):
 @frappe.whitelist()
 def get_total_collected(invoice_name):
     total = frappe.db.sql("""
-        SELECT SUM(amount_collected)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END)
         FROM `tabInvoice Collection`
         WHERE invoice=%s
     """, invoice_name)[0][0] or 0
@@ -146,21 +146,76 @@ def validate_invoice_collection(doc, method):
         return
 
     already_collected = frappe.db.sql("""
-        SELECT SUM(amount_collected)
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_collected ELSE (amount_collected + advance_adjusted - excess_amount) END)
         FROM `tabInvoice Collection`
         WHERE invoice=%s AND name != %s
-    """, (doc.invoice, doc.name))[0][0] or 0
+    """, (doc.invoice, doc.name or ""))[0][0] or 0
 
-    new_total = flt(already_collected) + flt(doc.amount_collected)
+    trying_to_add = flt(doc.amount_collected) if doc.is_advance else (flt(doc.amount_collected) + flt(doc.advance_adjusted) - flt(doc.excess_amount))
+    new_total = flt(already_collected) + trying_to_add
 
-    if new_total > flt(invoice.grand_total):
+    if new_total > flt(invoice.grand_total) + 0.01:
         frappe.throw(
             f"Collection exceeds Invoice Amount.<br><br>"
             f"Grand Total: {invoice.grand_total}<br>"
             f"Already Collected: {already_collected}<br>"
-            f"Trying to Add: {doc.amount_collected}<br><br>"
+            f"Trying to Add: {trying_to_add}<br><br>"
             f"Remaining Balance: {invoice.grand_total - already_collected}"
         )
+
+
+def validate_purchase_collection(doc, method):
+    """Validate that total purchase collection does not exceed Grand Total of Purchase"""
+    if not doc.purchase:
+        return
+
+    purchase = frappe.db.get_value("Purchase", doc.purchase, ["grand_total"], as_dict=True)
+    if not purchase:
+        return
+
+    already_paid = frappe.db.sql("""
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END)
+        FROM `tabPurchase Collection`
+        WHERE purchase=%s AND name != %s
+    """, (doc.purchase, doc.name or ""))[0][0] or 0
+
+    trying_to_add = flt(doc.amount_paid) if doc.is_advance else (flt(doc.amount_paid) + flt(doc.advance_adjusted) - flt(doc.excess_amount))
+    new_total = flt(already_paid) + trying_to_add
+
+    if new_total > flt(purchase.grand_total) + 0.01:
+        frappe.throw(
+            f"Collection exceeds Purchase Amount.<br><br>"
+            f"Grand Total: {purchase.grand_total}<br>"
+            f"Already Paid: {already_paid}<br>"
+            f"Trying to Add: {trying_to_add}<br><br>"
+            f"Remaining Balance: {purchase.grand_total - already_paid}"
+        )
+
+
+def update_purchase_collection_amounts(doc, method):
+    """Update paid_amount and balance_amount in Purchase whenever a Purchase Collection is inserted/updated/deleted."""
+    if not doc.purchase:
+        return
+
+    purchase = frappe.get_doc("Purchase", doc.purchase)
+    total_applied = flt(frappe.db.sql("""
+        SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END)
+        FROM `tabPurchase Collection`
+        WHERE purchase = %s
+    """, (doc.purchase,))[0][0] or 0)
+
+    grand_total = flt(purchase.grand_total)
+    balance = max(0.0, grand_total - total_applied)
+    status = "Pending" if total_applied == 0 else ("Partially Paid" if balance > 0 else "Fully Paid")
+
+    frappe.db.set_value("Purchase", doc.purchase, {
+        "paid_amount": total_applied,
+        "balance_amount": balance,
+        "purchase_status": status
+    })
+
+    if doc.vendor_id or purchase.vendor_id:
+        sync_customer_opening_balance_logs(doc.vendor_id or purchase.vendor_id)
 
 @frappe.whitelist()
 def get_todays_followups():
@@ -2587,6 +2642,260 @@ def get_expense_tracker_summary(filter_type="", from_date="", to_date="", expens
 
 
 @frappe.whitelist()
+def get_customer_balances(customer_id, current_collection=None):
+    """Fetch current opening_balance and available_advance for a Customer"""
+    if not customer_id:
+        return {"opening_balance": 0, "available_advance": 0}
+    
+    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance"], as_dict=True) or {}
+    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+
+    other_ob_deducted = frappe.db.sql("""
+        SELECT COALESCE(SUM(opening_balance_deduction), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
+
+    other_excess = frappe.db.sql("""
+        SELECT COALESCE(SUM(excess_amount), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
+
+    avail_ob = max(0.0, init_ob - float(other_ob_deducted) + float(other_excess))
+    
+    adv_collections = frappe.db.sql("""
+        SELECT COALESCE(SUM(amount_collected), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND is_advance = 1 AND (invoice IS NULL OR invoice = '')
+    """, customer_id)[0][0] or 0
+    
+    adv_used = frappe.db.sql("""
+        SELECT COALESCE(SUM(advance_adjusted), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL) AND name != %s
+    """, (customer_id, current_collection or ""))[0][0] or 0
+    
+    available_advance = max(0.0, float(adv_collections) - float(adv_used))
+    
+    return {
+        "opening_balance": avail_ob,
+        "available_advance": available_advance
+    }
+
+
+@frappe.whitelist()
+def sync_customer_opening_balance(customer_id, doc=None):
+    """Synchronize Customer Opening Balance and Available Advance Amount from collections"""
+    if not customer_id:
+        return
+    
+    adv_collections = frappe.db.sql("""
+        SELECT COALESCE(SUM(amount_collected), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND is_advance = 1 AND (invoice IS NULL OR invoice = '')
+    """, customer_id)[0][0] or 0
+    
+    adv_used = frappe.db.sql("""
+        SELECT COALESCE(SUM(advance_adjusted), 0)
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (is_advance = 0 OR is_advance IS NULL)
+    """, customer_id)[0][0] or 0
+    
+    avail_adv = max(0.0, float(adv_collections) - float(adv_used))
+
+    # Update Customer Available Advance & Opening Balance
+    frappe.db.set_value("Customer", customer_id, "total_advance_amount", avail_adv, update_modified=False)
+    sync_customer_opening_balance_logs(customer_id)
+
+
+@frappe.whitelist()
+def add_customer_opening_balance(customer_id, amount, remarks=None):
+    """Add additional opening balance to Customer and insert row into Opening Balance Usage Log"""
+    if not customer_id or not frappe.db.exists("Customer", customer_id):
+        frappe.throw(frappe._("Customer not found."))
+    
+    amount = float(amount or 0)
+    if amount <= 0:
+        frappe.throw(frappe._("Amount must be greater than 0."))
+
+    current_ob = float(frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0)
+    new_ob = current_ob + amount
+    
+    frappe.db.set_value("Customer", customer_id, "opening_balance", new_ob, update_modified=False)
+
+    # Insert child row directly into tabCustomer Opening Balance Log
+    idx = (frappe.db.sql("""
+        SELECT MAX(idx) FROM `tabCustomer Opening Balance Log` WHERE parent = %s
+    """, customer_id)[0][0] or 0) + 1
+
+    log_entry = frappe.get_doc({
+        "doctype": "Customer Opening Balance Log",
+        "parent": customer_id,
+        "parenttype": "Customer",
+        "parentfield": "opening_balance_logs",
+        "idx": idx,
+        "date": frappe.utils.today(),
+        "transaction_type": "Opening Balance Addition",
+        "voucher_type": "Customer",
+        "voucher_no": customer_id,
+        "debit": 0.0,
+        "credit": amount,
+        "balance": new_ob,
+        "remarks": (remarks or "").strip() or "Additional Opening Balance added"
+    })
+    log_entry.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "success", "opening_balance": new_ob}
+
+
+@frappe.whitelist()
+def sync_customer_opening_balance_logs(customer_id):
+    """Rebuild Customer Opening Balance Usage Log table while preserving manual addition rows"""
+    if not customer_id or not frappe.db.exists("Customer", customer_id):
+        return []
+    
+    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance", "creation"], as_dict=True) or {}
+    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+    
+    if not cust_data.get("initial_opening_balance") and init_ob > 0:
+        frappe.db.set_value("Customer", customer_id, "initial_opening_balance", init_ob, update_modified=False)
+
+    # 1. Fetch existing manual "Opening Balance Addition" entries to preserve them
+    manual_additions = frappe.db.sql("""
+        SELECT date, transaction_type, voucher_type, voucher_no, credit, debit, remarks, creation, 'Addition' as tx_kind
+        FROM `tabCustomer Opening Balance Log`
+        WHERE parent = %s AND transaction_type = 'Opening Balance Addition'
+    """, customer_id, as_dict=True)
+
+    # 2. Fetch all collections (Sales & Purchase) affecting OB chronologically
+    sales_collections = frappe.db.sql("""
+        SELECT name, collection_date as date, invoice as doc_ref, opening_balance_deduction, excess_amount, creation, 'Sales Collection' as tx_kind
+        FROM `tabInvoice Collection`
+        WHERE customer_id = %s AND (opening_balance_deduction > 0 OR excess_amount > 0)
+    """, customer_id, as_dict=True)
+
+    purc_collections = frappe.db.sql("""
+        SELECT name, payment_date as date, purchase as doc_ref, opening_balance_deduction, excess_amount, creation, 'Purchase Collection' as tx_kind
+        FROM `tabPurchase Collection`
+        WHERE vendor_id = %s AND (opening_balance_deduction > 0 OR excess_amount > 0)
+    """, customer_id, as_dict=True)
+
+    all_tx = list(manual_additions) + list(sales_collections) + list(purc_collections)
+    created_date = frappe.utils.getdate(cust_data.get("creation")) if cust_data.get("creation") else frappe.utils.today()
+    all_tx.sort(key=lambda x: (
+        frappe.utils.getdate(x.date) if x.date else created_date,
+        0 if x.tx_kind == "Addition" else 1,
+        str(x.creation or "")
+    ))
+
+    # Delete all log rows for rebuild
+    frappe.db.sql("DELETE FROM `tabCustomer Opening Balance Log` WHERE parent = %s", customer_id)
+    
+    running_balance = 0.0
+    logs = []
+    idx = 1
+
+    # Initial Opening Balance Entry
+    if init_ob > 0 or not all_tx:
+        running_balance = init_ob
+        log_entry = frappe.get_doc({
+            "doctype": "Customer Opening Balance Log",
+            "parent": customer_id,
+            "parenttype": "Customer",
+            "parentfield": "opening_balance_logs",
+            "idx": idx,
+            "date": created_date,
+            "transaction_type": "Initial Opening Balance",
+            "voucher_type": "Customer",
+            "voucher_no": customer_id,
+            "debit": 0.0,
+            "credit": init_ob,
+            "balance": running_balance,
+            "remarks": "Initial Opening Balance recorded"
+        })
+        log_entry.insert(ignore_permissions=True)
+        logs.append(log_entry.as_dict())
+        idx += 1
+
+    for tx in all_tx:
+        if tx.tx_kind == "Addition":
+            amt = float(tx.credit or 0)
+            running_balance += amt
+            log_entry = frappe.get_doc({
+                "doctype": "Customer Opening Balance Log",
+                "parent": customer_id,
+                "parenttype": "Customer",
+                "parentfield": "opening_balance_logs",
+                "idx": idx,
+                "date": tx.date,
+                "transaction_type": "Opening Balance Addition",
+                "voucher_type": "Customer",
+                "voucher_no": customer_id,
+                "debit": 0.0,
+                "credit": amt,
+                "balance": running_balance,
+                "remarks": tx.remarks or "Additional Opening Balance added"
+            })
+            log_entry.insert(ignore_permissions=True)
+            logs.append(log_entry.as_dict())
+            idx += 1
+        elif tx.tx_kind in ["Sales Collection", "Purchase Collection"]:
+            deducted = float(tx.opening_balance_deduction or 0)
+            excess = float(tx.excess_amount or 0)
+            v_type = "Invoice Collection" if tx.tx_kind == "Sales Collection" else "Purchase Collection"
+            label_prefix = "Sales Collection" if tx.tx_kind == "Sales Collection" else "Purchase Collection"
+
+            if deducted > 0:
+                running_balance -= deducted
+                log_entry = frappe.get_doc({
+                    "doctype": "Customer Opening Balance Log",
+                    "parent": customer_id,
+                    "parenttype": "Customer",
+                    "parentfield": "opening_balance_logs",
+                    "idx": idx,
+                    "date": tx.date,
+                    "transaction_type": f"{label_prefix} OB Deduction",
+                    "voucher_type": v_type,
+                    "voucher_no": tx.name,
+                    "debit": deducted,
+                    "credit": 0.0,
+                    "balance": running_balance,
+                    "remarks": f"Used for {tx.doc_ref or ''}"
+                })
+                log_entry.insert(ignore_permissions=True)
+                logs.append(log_entry.as_dict())
+                idx += 1
+
+            if excess > 0:
+                running_balance += excess
+                log_entry = frappe.get_doc({
+                    "doctype": "Customer Opening Balance Log",
+                    "parent": customer_id,
+                    "parenttype": "Customer",
+                    "parentfield": "opening_balance_logs",
+                    "idx": idx,
+                    "date": tx.date,
+                    "transaction_type": "Excess Collection Credit",
+                    "voucher_type": v_type,
+                    "voucher_no": tx.name,
+                    "debit": 0.0,
+                    "credit": excess,
+                    "balance": running_balance,
+                    "remarks": f"Excess payment from {tx.doc_ref or ''}"
+                })
+                log_entry.insert(ignore_permissions=True)
+                logs.append(log_entry.as_dict())
+                idx += 1
+
+    new_ob = max(0.0, running_balance)
+    frappe.db.set_value("Customer", customer_id, "opening_balance", new_ob, update_modified=False)
+    
+    return logs
+
+
+@frappe.whitelist()
 def check_customer_links(customer):
     linked_doctypes = [
         ("Invoice", "customer_id"),
@@ -2601,6 +2910,17 @@ def check_customer_links(customer):
             return True
 
     return False
+
+@frappe.whitelist()
+def get_item_names(item_ids):
+    """Fetch item_name mapping for a list of Item IDs"""
+    if isinstance(item_ids, str):
+        item_ids = frappe.parse_json(item_ids)
+    if not item_ids:
+        return {}
+    
+    items = frappe.get_all("Item", filters={"name": ["in", item_ids]}, fields=["name", "item_name"])
+    return {d.name: d.item_name for d in items if d.item_name}
 
 @frappe.whitelist()
 def delete_customer_location(row_name):
@@ -2672,3 +2992,638 @@ def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
         ORDER BY creation DESC
         LIMIT %s, %s
     """, (link_search, link_search, start, page_len))
+
+
+@frappe.whitelist()
+def get_sales_export_count(filters=None, names=None):
+    """Returns invoice count and item count for confirmation dialog before export."""
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("inv.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("inv.invoice_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("inv.invoice_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("inv.invoice_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("customer_id"):
+            conditions.append("inv.customer_id = %(customer_id)s")
+            values["customer_id"] = filters.get("customer_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    res = frappe.db.sql(f"""
+        SELECT COUNT(DISTINCT inv.name) as invoice_count, COUNT(item_tb.name) as item_count
+        FROM `tabInvoice` inv
+        LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
+        {where_clause}
+    """, values, as_dict=True)
+
+    return {
+        "invoice_count": res[0].invoice_count if res else 0,
+        "item_count": res[0].item_count if res else 0
+    }
+
+
+@frappe.whitelist()
+def get_purchase_export_count(filters=None, names=None):
+    """Returns purchase count and item count for confirmation dialog before export."""
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("pur.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("pur.bill_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("pur.bill_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("vendor_id"):
+            conditions.append("pur.vendor_id = %(vendor_id)s")
+            values["vendor_id"] = filters.get("vendor_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    res = frappe.db.sql(f"""
+        SELECT COUNT(DISTINCT pur.name) as purchase_count, COUNT(item_tb.name) as item_count
+        FROM `tabPurchase` pur
+        LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
+        {where_clause}
+    """, values, as_dict=True)
+
+    return {
+        "purchase_count": res[0].purchase_count if res else 0,
+        "item_count": res[0].item_count if res else 0
+    }
+
+
+@frappe.whitelist()
+def export_sales_itemized_excel(filters=None, names=None):
+    """
+    Exports Sales List (Invoice) records along with Item Details (Item Name, Qty, Rate, Amount).
+    If names is provided (list of selected Invoice IDs), exports only those selected records.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("inv.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("inv.invoice_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("inv.invoice_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("inv.invoice_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("customer_id"):
+            conditions.append("inv.customer_id = %(customer_id)s")
+            values["customer_id"] = filters.get("customer_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    query = f"""
+        SELECT 
+            inv.name as ref_no,
+            COALESCE(bp.business_person_name, inv.business_person_name, '') as business_person_name,
+            inv.customer_id,
+            inv.customer_name,
+            inv.location,
+            inv.billing_name,
+            inv.invoice_date,
+            inv.po_no as dc_no,
+            inv.payment_terms,
+            inv.po_date as dc_date,
+            inv.due_date,
+            inv.company_name,
+            COALESCE(item.item_name, item_tb.service, '') as item_name,
+            COALESCE(item_tb.quantity, 0) as quantity,
+            COALESCE(item_tb.price, 0) as price,
+            COALESCE(item_tb.discount_type, '') as item_discount_type,
+            COALESCE(item_tb.discount, 0) as item_discount,
+            COALESCE(item_tb.tax_type, '') as item_tax_type,
+            COALESCE(item_tb.tax_amount, 0) as item_tax_amount,
+            COALESCE(item_tb.sub_total, 0) as sub_total,
+            COALESCE(inv.total_amount, 0) as total_amount,
+            COALESCE(inv.total_qty, 0) as total_qty,
+            COALESCE(inv.overall_discount_type, '') as overall_discount_type,
+            COALESCE(inv.overall_discount, 0) as overall_discount,
+            COALESCE(inv.grand_total, 0) as grand_total,
+            COALESCE(inv.advance_amount_paid, 0) as advance_amount_paid,
+            COALESCE(inv.received_amount, 0) as received_amount,
+            COALESCE(inv.balance_amount, 0) as balance_amount
+        FROM `tabInvoice` inv
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = inv.business_person_name
+        LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
+        LEFT JOIN `tabItem` item ON item.name = item_tb.service
+        {where_clause}
+        ORDER BY inv.invoice_date DESC, inv.name DESC
+    """
+
+    rows = frappe.db.sql(query, values, as_dict=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sales Report"
+
+    headers = [
+        "S.No",
+        "Invoice ID",
+        "Business Person",
+        "Customer ID",
+        "Customer Name",
+        "Location",
+        "Billing Name",
+        "Invoice Date",
+        "DC No",
+        "Payment Terms",
+        "DC Date",
+        "Due Date",
+        "Company Name",
+        "Item Name",
+        "Quantity (Qty)",
+        "Price (Rate)",
+        "Discount Type",
+        "Discount",
+        "Tax Type",
+        "Tax Amount",
+        "Sub Total",
+        "Total Amount",
+        "Total Quantity",
+        "Overall Discount Type",
+        "Overall Discount",
+        "Grand Total",
+        "Advance Amount Paid",
+        "Received Amount",
+        "Balance Amount"
+    ]
+
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    ws.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    # Group rows by invoice
+    invoice_groups = {}
+    for row in rows:
+        ref_no = row.ref_no or ""
+        if ref_no not in invoice_groups:
+            invoice_groups[ref_no] = []
+        invoice_groups[ref_no].append(row)
+
+    def format_excel_date(d_val):
+        if not d_val:
+            return "-"
+        try:
+            if isinstance(d_val, str):
+                d_val = getdate(d_val)
+            return d_val.strftime("%d-%m-%Y")
+        except Exception:
+            return str(d_val) if d_val else "-"
+
+    def format_excel_str(val):
+        if val is None or val == "" or str(val).strip() == "":
+            return "-"
+        return str(val).strip()
+
+    current_row = 2
+    for s_no, (ref_no, items) in enumerate(invoice_groups.items(), start=1):
+        start_row = current_row
+        for item_idx, row in enumerate(items):
+            ws.append([
+                s_no,
+                format_excel_str(ref_no),
+                format_excel_str(row.business_person_name),
+                format_excel_str(row.customer_id),
+                format_excel_str(row.customer_name),
+                format_excel_str(row.location),
+                format_excel_str(row.billing_name),
+                format_excel_date(row.invoice_date),
+                format_excel_str(row.dc_no),
+                format_excel_str(row.payment_terms),
+                format_excel_date(row.dc_date),
+                format_excel_date(row.due_date),
+                format_excel_str(row.company_name),
+                format_excel_str(row.item_name),
+                float(row.quantity or 0),
+                float(row.price or 0),
+                format_excel_str(row.item_discount_type),
+                float(row.item_discount or 0),
+                format_excel_str(row.item_tax_type),
+                float(row.item_tax_amount or 0),
+                float(row.sub_total or 0),
+                float(row.total_amount or 0),
+                float(row.total_qty or 0),
+                format_excel_str(row.overall_discount_type),
+                float(row.overall_discount or 0),
+                float(row.grand_total or 0),
+                float(row.advance_amount_paid or 0),
+                float(row.received_amount or 0),
+                float(row.balance_amount or 0)
+            ])
+
+            r_num = current_row
+            ws.cell(row=r_num, column=1).alignment = center_align
+            ws.cell(row=r_num, column=2).alignment = left_align
+            ws.cell(row=r_num, column=3).alignment = left_align
+            ws.cell(row=r_num, column=4).alignment = left_align
+            ws.cell(row=r_num, column=5).alignment = left_align
+            ws.cell(row=r_num, column=6).alignment = left_align
+            ws.cell(row=r_num, column=7).alignment = left_align
+            ws.cell(row=r_num, column=8).alignment = center_align
+            ws.cell(row=r_num, column=9).alignment = left_align
+            ws.cell(row=r_num, column=10).alignment = left_align
+            ws.cell(row=r_num, column=11).alignment = center_align
+            ws.cell(row=r_num, column=12).alignment = center_align
+            ws.cell(row=r_num, column=13).alignment = left_align
+            ws.cell(row=r_num, column=14).alignment = left_align
+            ws.cell(row=r_num, column=15).alignment = right_align
+            ws.cell(row=r_num, column=16).alignment = right_align
+            ws.cell(row=r_num, column=17).alignment = center_align
+            ws.cell(row=r_num, column=18).alignment = right_align
+            ws.cell(row=r_num, column=19).alignment = left_align
+            ws.cell(row=r_num, column=20).alignment = right_align
+            ws.cell(row=r_num, column=21).alignment = right_align
+            ws.cell(row=r_num, column=22).alignment = right_align
+            ws.cell(row=r_num, column=23).alignment = right_align
+            ws.cell(row=r_num, column=24).alignment = center_align
+            ws.cell(row=r_num, column=25).alignment = right_align
+            ws.cell(row=r_num, column=26).alignment = right_align
+            ws.cell(row=r_num, column=27).alignment = right_align
+            ws.cell(row=r_num, column=28).alignment = right_align
+
+            ws.cell(row=r_num, column=15).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=16).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=18).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=20).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=21).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=22).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=23).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=25).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=26).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=27).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=28).number_format = "₹#,##0.00"
+
+            for c_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=r_num, column=c_num)
+                cell.border = thin_border
+                if str(cell.value or "").strip() == "-":
+                    cell.alignment = center_align
+
+            current_row += 1
+
+        end_row = current_row - 1
+        # Merge invoice level columns vertically if invoice has multiple items
+        if end_row > start_row:
+            invoice_level_cols = list(range(1, 14)) + list(range(22, 29))
+            for col_idx in invoice_level_cols:
+                ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
+
+        # Apply darker bottom border at the end of each invoice block
+        thick_bottom = Side(style='medium', color='000000')
+        black_side = Side(style='thin', color='000000')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=end_row, column=col_idx)
+            cell.border = Border(
+                left=cell.border.left if cell.border else black_side,
+                right=cell.border.right if cell.border else black_side,
+                top=cell.border.top if cell.border else black_side,
+                bottom=thick_bottom
+            )
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    import io
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    frappe.response['filename'] = 'Sales_Item_Details_Report.xlsx'
+    frappe.response['filecontent'] = output.getvalue()
+    frappe.response['type'] = 'binary'
+
+
+@frappe.whitelist()
+def export_purchase_itemized_excel(filters=None, names=None):
+    """
+    Exports Purchase List (Purchase) records along with Vendor Details, Purchase Details, Item Details, and Amount Details.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions = []
+    values = {}
+
+    if names:
+        conditions.append("pur.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("pur.bill_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("pur.bill_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        if filters.get("vendor_id"):
+            conditions.append("pur.vendor_id = %(vendor_id)s")
+            values["vendor_id"] = filters.get("vendor_id")
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    query = f"""
+        SELECT 
+            pur.name as ref_no,
+            COALESCE(bp.business_person_name, pur.business_person_name, '') as business_person_name,
+            pur.vendor_id,
+            pur.vendor_name,
+            pur.bill_no,
+            pur.bill_date,
+            pur.payment_terms,
+            pur.due_date,
+            pur.purchase_status,
+            COALESCE(item.item_name, item_tb.service, '') as item_name,
+            COALESCE(item_tb.quantity, 0) as quantity,
+            COALESCE(item_tb.price, 0) as price,
+            COALESCE(item_tb.discount_type, '') as item_discount_type,
+            COALESCE(item_tb.discount, 0) as item_discount,
+            COALESCE(item_tb.tax_type, '') as item_tax_type,
+            COALESCE(item_tb.tax_amount, 0) as item_tax_amount,
+            COALESCE(item_tb.sub_total, 0) as sub_total,
+            COALESCE(pur.total_amount, 0) as total_amount,
+            COALESCE(pur.total_qty, 0) as total_qty,
+            COALESCE(pur.overall_discount_type, '') as overall_discount_type,
+            COALESCE(pur.overall_discount, 0) as overall_discount,
+            COALESCE(pur.grand_total, 0) as grand_total,
+            COALESCE(pur.advance_amount_paid, 0) as advance_amount_paid,
+            COALESCE(pur.paid_amount, 0) as paid_amount,
+            COALESCE(pur.balance_amount, 0) as balance_amount
+        FROM `tabPurchase` pur
+        LEFT JOIN `tabBusiness Person` bp ON bp.name = pur.business_person_name
+        LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
+        LEFT JOIN `tabItem` item ON item.name = item_tb.service
+        {where_clause}
+        ORDER BY pur.bill_date DESC, pur.name DESC
+    """
+
+    rows = frappe.db.sql(query, values, as_dict=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Purchase Report"
+
+    headers = [
+        "S.No",
+        "Purchase ID",
+        "Business Person",
+        "Vendor ID",
+        "Vendor Name",
+        "Bill No",
+        "Bill Date",
+        "Payment Terms",
+        "Due Date",
+        "Purchase Status",
+        "Item Name",
+        "Quantity (Qty)",
+        "Price (Rate)",
+        "Discount Type",
+        "Discount",
+        "Tax Type",
+        "Tax Amount",
+        "Sub Total",
+        "Total Amount",
+        "Total Quantity",
+        "Overall Discount Type",
+        "Overall Discount",
+        "Grand Total",
+        "Advance Amount Paid",
+        "Paid Amount",
+        "Balance Amount"
+    ]
+
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    ws.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    # Group rows by purchase
+    purchase_groups = {}
+    for row in rows:
+        ref_no = row.ref_no or ""
+        if ref_no not in purchase_groups:
+            purchase_groups[ref_no] = []
+        purchase_groups[ref_no].append(row)
+
+    def format_excel_date(d_val):
+        if not d_val:
+            return "-"
+        try:
+            if isinstance(d_val, str):
+                d_val = getdate(d_val)
+            return d_val.strftime("%d-%m-%Y")
+        except Exception:
+            return str(d_val) if d_val else "-"
+
+    def format_excel_str(val):
+        if val is None or val == "" or str(val).strip() == "":
+            return "-"
+        return str(val).strip()
+
+    current_row = 2
+    for s_no, (ref_no, items) in enumerate(purchase_groups.items(), start=1):
+        start_row = current_row
+        for item_idx, row in enumerate(items):
+            ws.append([
+                s_no,
+                format_excel_str(ref_no),
+                format_excel_str(row.business_person_name),
+                format_excel_str(row.vendor_id),
+                format_excel_str(row.vendor_name),
+                format_excel_str(row.bill_no),
+                format_excel_date(row.bill_date),
+                format_excel_str(row.payment_terms),
+                format_excel_date(row.due_date),
+                format_excel_str(row.purchase_status),
+                format_excel_str(row.item_name),
+                float(row.quantity or 0),
+                float(row.price or 0),
+                format_excel_str(row.item_discount_type),
+                float(row.item_discount or 0),
+                format_excel_str(row.item_tax_type),
+                float(row.item_tax_amount or 0),
+                float(row.sub_total or 0),
+                float(row.total_amount or 0),
+                float(row.total_qty or 0),
+                format_excel_str(row.overall_discount_type),
+                float(row.overall_discount or 0),
+                float(row.grand_total or 0),
+                float(row.advance_amount_paid or 0),
+                float(row.paid_amount or 0),
+                float(row.balance_amount or 0)
+            ])
+
+            r_num = current_row
+            ws.cell(row=r_num, column=1).alignment = center_align
+            ws.cell(row=r_num, column=2).alignment = left_align
+            ws.cell(row=r_num, column=3).alignment = left_align
+            ws.cell(row=r_num, column=4).alignment = left_align
+            ws.cell(row=r_num, column=5).alignment = left_align
+            ws.cell(row=r_num, column=6).alignment = left_align
+            ws.cell(row=r_num, column=7).alignment = center_align
+            ws.cell(row=r_num, column=8).alignment = left_align
+            ws.cell(row=r_num, column=9).alignment = center_align
+            ws.cell(row=r_num, column=10).alignment = center_align
+            ws.cell(row=r_num, column=11).alignment = left_align
+            ws.cell(row=r_num, column=12).alignment = right_align
+            ws.cell(row=r_num, column=13).alignment = right_align
+            ws.cell(row=r_num, column=14).alignment = center_align
+            ws.cell(row=r_num, column=15).alignment = right_align
+            ws.cell(row=r_num, column=16).alignment = left_align
+            ws.cell(row=r_num, column=17).alignment = right_align
+            ws.cell(row=r_num, column=18).alignment = right_align
+            ws.cell(row=r_num, column=19).alignment = right_align
+            ws.cell(row=r_num, column=20).alignment = right_align
+            ws.cell(row=r_num, column=21).alignment = center_align
+            ws.cell(row=r_num, column=22).alignment = right_align
+            ws.cell(row=r_num, column=23).alignment = right_align
+            ws.cell(row=r_num, column=24).alignment = right_align
+            ws.cell(row=r_num, column=25).alignment = right_align
+
+            ws.cell(row=r_num, column=12).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=13).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=15).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=17).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=18).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=19).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=20).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=22).number_format = "#,##0.00"
+            ws.cell(row=r_num, column=23).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=24).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=25).number_format = "₹#,##0.00"
+
+            for c_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=r_num, column=c_num)
+                cell.border = thin_border
+                if str(cell.value or "").strip() == "-":
+                    cell.alignment = center_align
+
+            current_row += 1
+
+        end_row = current_row - 1
+        # Merge purchase level columns vertically if purchase has multiple items
+        if end_row > start_row:
+            purchase_level_cols = list(range(1, 11)) + list(range(19, 26))
+            for col_idx in purchase_level_cols:
+                ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
+
+        # Apply darker bottom border at the end of each purchase block
+        thick_bottom = Side(style='medium', color='000000')
+        black_side = Side(style='thin', color='000000')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=end_row, column=col_idx)
+            cell.border = Border(
+                left=cell.border.left if cell.border else black_side,
+                right=cell.border.right if cell.border else black_side,
+                top=cell.border.top if cell.border else black_side,
+                bottom=thick_bottom
+            )
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    import io
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    frappe.response['filename'] = 'Purchase_Item_Details_Report.xlsx'
+    frappe.response['filecontent'] = output.getvalue()
+    frappe.response['type'] = 'binary'

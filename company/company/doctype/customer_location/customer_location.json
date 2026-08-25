@@ -14,9 +14,8 @@
   {
    "allow_in_quick_entry": 1,
    "fieldname": "customer",
-   "fieldtype": "Link",
-   "label": "Customer",
-   "options": "Customer"
+   "fieldtype": "Data",
+   "label": "Customer"
   },
   {
    "allow_in_quick_entry": 1,

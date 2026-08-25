@@ -2,15 +2,23 @@
  "app": "company",
  "charts": [
   {
+   "chart_name": "Invoice",
+   "label": "Invoice"
+  },
+  {
    "chart_name": "Customer",
    "label": "Customer"
+  },
+  {
+   "chart_name": "Leads",
+   "label": "Leads"
   },
   {
    "chart_name": "Estimations",
    "label": "Estimations"
   }
  ],
- "content": "[{\"id\":\"e_JxZxBhBx\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"AsOcZsZl-X\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Leads\",\"col\":4}},{\"id\":\"nhNnPHiSVe\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Customer\",\"col\":4}},{\"id\":\"7bQlqf5VQm\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice\",\"col\":4}},{\"id\":\"gHivb8vkUr\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MqzvI6fVm3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"q6OAO_ktuO\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Estimation and Invoice Cards\",\"col\":12}},{\"id\":\"NajRCtqwMp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ZCmqUk_KP3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Customer\",\"col\":6}},{\"id\":\"Q_f-wKIAdO\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Estimations\",\"col\":6}},{\"id\":\"xNmFwJ5N6q\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "content": "[{\"id\":\"9Y-qeXrpNs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"gHivb8vkUr\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"AsOcZsZl-X\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Leads\",\"col\":4}},{\"id\":\"nhNnPHiSVe\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Customer\",\"col\":4}},{\"id\":\"7bQlqf5VQm\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice\",\"col\":4}},{\"id\":\"MqzvI6fVm3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"haxjwQT01R\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"q6OAO_ktuO\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Sales Estimation and Invoice Cards\",\"col\":12}},{\"id\":\"NajRCtqwMp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"8QP0txe1IU\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Leads\",\"col\":6}},{\"id\":\"ZCmqUk_KP3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Customer\",\"col\":6}},{\"id\":\"Q_f-wKIAdO\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Estimations\",\"col\":6}},{\"id\":\"BXKdLXceAW\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Invoice\",\"col\":6}},{\"id\":\"xNmFwJ5N6q\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
  "creation": "2025-11-17 15:23:45.974850",
  "custom_blocks": [
   {
@@ -29,7 +37,7 @@
  "label": "Sales Dashboard",
  "link_type": "DocType",
  "links": [],
- "modified": "2025-12-31 15:37:48.516049",
+ "modified": "2026-08-17 11:43:27.215284",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Sales Dashboard",

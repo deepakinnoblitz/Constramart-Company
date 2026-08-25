@@ -19,9 +19,35 @@ class Customer(Document):
             ):
                 frappe.throw("Phone number already exists")
             
+        if self.is_new() or not frappe.db.exists("Invoice", {"customer_id": self.name}):
+            self.initial_opening_balance = self.opening_balance or 0.0
+
+        if not self.is_new() and not getattr(self.flags, "allow_opening_balance_edit", False):
+            old_doc = self.get_doc_before_save()
+            if old_doc and float(old_doc.opening_balance or 0) != float(self.opening_balance or 0):
+                if frappe.db.exists("Invoice", {"customer_id": self.name}):
+                    frappe.throw("Opening Balance cannot be edited manually because Sales Bills exist for this Customer.")
+
         if check_customer_links(self.name):
             frappe.throw("This Customer has linked records and cannot be modified.")
+
+    def on_update(self):
+        from company.company.api import sync_customer_opening_balance_logs
+        sync_customer_opening_balance_logs(self.name)
 
     def on_trash(self):
         if check_customer_links(self.name):
             frappe.throw("This Customer cannot be deleted because linked transactions exist.")
+
+
+@frappe.whitelist()
+def refresh_customer_status(customer):
+    if not customer:
+        return False
+    invoice_count = frappe.db.count("Invoice", filters={"customer_id": customer})
+    new_status = "Old Customer" if invoice_count >= 2 else "New Customer"
+    frappe.db.set_value("Customer", customer, "customer_status", new_status)
+    customer_doc = frappe.get_doc("Customer", customer)
+    customer_doc.notify_update()
+    frappe.publish_realtime("customer_status_updated", {"customer": customer, "status": new_status})
+    return new_status

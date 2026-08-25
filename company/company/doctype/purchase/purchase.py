@@ -12,6 +12,10 @@ class Purchase(Document):
         if self.reference_invoice and not self.invoice_id:
             self.invoice_id = self.reference_invoice
 
+        # Check advance payment mode if advance amount entered
+        if frappe.utils.flt(self.advance_amount_paid) > 0 and not self.advance_payment_type:
+            frappe.throw(frappe._("Please select Advance Payment Mode since Advance Amount Paid is entered."))
+
         for item in self.get("table_qecz"):
             if frappe.utils.flt(item.price) <= 0:
                 frappe.throw(frappe._("Price cannot be 0 or less for item {0} in row {1}").format(
@@ -70,8 +74,58 @@ class Purchase(Document):
         if self.invoice_id:
             frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", None)
 
+    def sync_advance_collection(self):
+        """Create or update advance collection record on save"""
+        adv_paid = frappe.utils.flt(self.advance_amount_paid)
+        payment_mode = getattr(self, "advance_payment_type", None) or "CASH RECEIVED"
+        
+        adv_name = frappe.db.get_value("Purchase Collection", {
+            "purchase": self.name,
+            "is_advance": 1
+        }, "name")
+
+        if adv_paid > 0:
+            if not adv_name:
+                adv_coll = frappe.get_doc({
+                    "doctype": "Purchase Collection",
+                    "purchase": self.name,
+                    "vendor_id": self.vendor_id,
+                    "payment_date": self.bill_date or frappe.utils.today(),
+                    "amount_to_pay": self.grand_total,
+                    "amount_paid": adv_paid,
+                    "mode_of_payment": payment_mode,
+                    "is_advance": 1,
+                    "business_person": self.business_person_name,
+                    "remarks": f"Advance payment recorded on Purchase Bill {self.name}"
+                })
+                adv_coll.insert(ignore_permissions=True)
+            else:
+                adv_coll = frappe.get_doc("Purchase Collection", adv_name)
+                if adv_coll.amount_paid != adv_paid or adv_coll.mode_of_payment != payment_mode:
+                    adv_coll.amount_paid = adv_paid
+                    adv_coll.mode_of_payment = payment_mode
+                    adv_coll.save(ignore_permissions=True)
+        elif adv_name:
+            frappe.delete_doc("Purchase Collection", adv_name, ignore_permissions=True)
+
+        # Sync in-memory values so UI reflects updated paid_amount immediately on first save
+        total_paid = frappe.utils.flt(frappe.db.sql("""
+            SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END) FROM `tabPurchase Collection`
+            WHERE purchase = %s
+        """, (self.name,))[0][0] or 0)
+        
+        balance = max(0.0, frappe.utils.flt(self.grand_total) - total_paid)
+        status = "Pending" if total_paid == 0 else ("Partially Paid" if balance > 0 else "Fully Paid")
+
+        self.db_set("paid_amount", total_paid, update_modified=False)
+        self.db_set("balance_amount", balance, update_modified=False)
+        self.db_set("purchase_status", status, update_modified=False)
+        self.paid_amount = total_paid
+        self.balance_amount = balance
+        self.purchase_status = status
+
     def on_update(self):
-        """Ensure Invoice reference is synchronized with this Purchase"""
+        """Ensure Invoice reference is synchronized with this Purchase and Advance Collection is synced"""
         if self.invoice_id:
             # Set this Purchase as the reference on the linked Invoice
             frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", self.name)
@@ -80,6 +134,8 @@ class Purchase(Document):
             old_doc = self.get_doc_before_save()
             if old_doc and old_doc.invoice_id:
                 frappe.db.set_value("Invoice", old_doc.invoice_id, "reference_purchase", None)
+
+        self.sync_advance_collection()
     
     def after_insert(self):
         # Update Invoice with Purchase reference
@@ -119,17 +175,20 @@ class Purchase(Document):
         # Sync Paid Amount and Balance Amount (Final Authority - Always recalculate on save)
         if self.name:
             total_paid = frappe.db.sql("""
-                SELECT SUM(amount_paid) FROM `tabPurchase Collection`
+                SELECT SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END) FROM `tabPurchase Collection`
                 WHERE purchase = %s
             """, (self.name,))[0][0] or 0
             self.paid_amount = frappe.utils.flt(total_paid)
         else:
             self.paid_amount = 0
             
-        self.balance_amount = frappe.utils.flt(self.grand_total) - self.paid_amount
+        paid_rec = frappe.utils.flt(self.paid_amount or 0)
+        adv_paid = frappe.utils.flt(self.advance_amount_paid or 0)
+        net_adv = 0.0 if (paid_rec >= adv_paid and adv_paid > 0) else adv_paid
+        self.balance_amount = max(0.0, frappe.utils.flt(self.grand_total) - paid_rec - net_adv)
         
         # Update status
-        if self.paid_amount == 0:
+        if (self.paid_amount + net_adv) == 0:
             self.purchase_status = "Pending"
         elif self.balance_amount > 0:
             self.purchase_status = "Partially Paid"

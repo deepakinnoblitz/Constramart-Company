@@ -1,10 +1,58 @@
-@media (min-width: 992px) {
-  [data-page-route=Workspaces] .layout-main {
-    height: calc(100vh - var(--navbar-height) - var(--page-head-height) - 5px) !important;
-    padding: 20px !important;
-    margin: auto !important;
-    max-width: none !important;
-  }
+/* Instant layout styling (avoids JS routing flicker on refresh) */
+.layout-main {
+  height: calc(100vh - var(--navbar-height) - var(--page-head-height) - 5px) !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Align Page Header and Workspace Container immediately */
+.page-head .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 20px !important;
+}
+
+/* Hide Workspace Header instantly (prevents flicker on refresh) */
+.workspace-header,
+.workspace-header-container {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.workspace-body,
+.codex-editor,
+.codex-editor__redactor,
+.layout-main-section {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Permanently hide Save button on locked Customer forms */
+body.customer-locked-form .page-actions .btn-primary,
+body.customer-locked-form .page-actions .primary-action,
+body.customer-locked-form [data-label="Save"],
+body.customer-locked-form button.primary-action,
+body.customer-locked-form .standard-actions .btn-primary,
+body.customer-locked-form .standard-actions .primary-action,
+.customer-locked-form .page-actions .btn-primary,
+.customer-locked-form .page-actions .primary-action,
+.customer-locked-form [data-label="Save"],
+.customer-locked-form button.primary-action {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  pointer-events: none !important;
 }
 
 :root {
@@ -193,7 +241,7 @@
 }
 
 .level-item {
-  color: #1e2f40 !important;
+  color: #ffffff !important;
 }
 
 .list-row-col {
@@ -2099,8 +2147,17 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
 }
 
 /* =======================================================
-   CLEAN KPI NUMBER CARD (FRAPPE)
+   CLEAN KPI NUMBER CARD (FRAPPE) & POPUP MENU FIX
    ======================================================= */
+
+/* Ensure parent containers allow dropdown popups */
+.widget-group,
+.widget-control,
+.widget-card,
+.widget-body,
+.widget-head {
+  overflow: visible !important;
+}
 
 .widget.number-widget-box {
   position: relative;
@@ -2109,23 +2166,37 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   justify-content: center;
 
   background: #ffffff;
-  border: 1px solid #d0d0d0;
-  border-radius: 14px;
+  border: 1px solid #46464614 !important;
+  border-radius: 16px;
 
-  padding: 20px 20px 20px 76px;
-  min-height: 110px;
+  padding: 20px 20px 20px 84px;
+  min-height: 104px;
 
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible !important;
+  z-index: 1;
 }
 
 .widget.number-widget-box:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
+  z-index: 15 !important;
+}
+
+/* Elevate card z-index when its three-dot dropdown menu is open */
+.widget.number-widget-box:focus-within,
+.widget.number-widget-box:has(.show),
+.widget-control:focus-within,
+.widget-control:has(.show),
+.widget-control:hover {
+  z-index: 50 !important;
+  overflow: visible !important;
 }
 
 /* -------------------------------------------------------
-   ICON
+   ICON BASE & COLORED ACCENTS
 ------------------------------------------------------- */
 
 .widget.number-widget-box::before {
@@ -2135,46 +2206,90 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   top: 50%;
   transform: translateY(-50%);
 
-  width: 44px;
-  height: 44px;
-  border-radius: 50px;
-
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 22px;
-
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 22px;
-  border: 1px solid #20a4e5;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  transition: all 0.2s ease;
 }
 
+/* 📞 LEADS: #11a2ce Theme */
+[number_card_name="Leads"] .widget.number-widget-box::before {
+  background-color: #ffffff;
+  border: 1px solid #11a2ce;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2311a2ce'%3E%3Cpath d='M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.59a1 1 0 01-.25 1.01l-2.2 2.19z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
+}
+
+/* 🧾 INVOICE: #11a2ce Theme */
+[number_card_name="Invoice"] .widget.number-widget-box::before {
+  background-color: #ffffff;
+  border: 1px solid #11a2ce;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311a2ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cpolyline points='10 9 9 9 8 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
+}
+
+/* 👥 CUSTOMER: #11a2ce Theme */
+[number_card_name="Customer"] .widget.number-widget-box::before {
+  background-color: #ffffff;
+  border: 1px solid #11a2ce;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2311a2ce'%3E%3Cpath d='M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
+}
+
+/* 📞 CALLS: Soft Sky Blue Theme */
+[number_card_name="Calls"] .widget.number-widget-box::before {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'%3E%3Cpath d='M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.59a1 1 0 01-.25 1.01l-2.2 2.19z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
+}
+
+/* 📅 TODAY MEETING: Soft Amber Theme */
+[number_card_name="Today Meeting"] .widget.number-widget-box::before {
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d48806'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
+}
 
 /* -------------------------------------------------------
-   TITLE
+   TYPOGRAPHY
 ------------------------------------------------------- */
 
 .widget.number-widget-box .widget-head {
   padding: 0;
-  margin-bottom: 6px;
-  margin-left: 12px;
+  margin-bottom: 4px;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: visible !important;
 }
 
+.widget.number-widget-box .widget-head .widget-title,
 .widget.number-widget-box .widget-title {
-  font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
+  font-size: var(--text-xs);
+  padding-top: 10px;
+  margin-top: var(--margin-xs);
 }
-
-/* -------------------------------------------------------
-   NUMBER
-------------------------------------------------------- */
 
 .widget.number-widget-box .widget-body {
   padding: 0;
-  margin-left: 12px;
+  margin-left: 8px;
+  overflow: visible !important;
 }
 
 .widget.number-widget-box .number {
@@ -2182,122 +2297,23 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   font-weight: 700;
   color: #0f172a !important;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
-/* Remove footer */
 .widget.number-widget-box .widget-footer {
   display: none;
 }
 
-/* Clean menu dots */
 .widget.number-widget-box .card-actions a {
   color: #94a3b8;
 }
 
-[number_card_name="Leads"] .widget.number-widget-box::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
-
-  background-color: #ffffff;
-  border: 1px solid #20a4e5;
-
-  /* 📞 Phone / Lead icon */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2320a4e5'%3E%3Cpath d='M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.59a1 1 0 01-.25 1.01l-2.2 2.19z'/%3E%3C/svg%3E");
-
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 22px;
-}
-
-[number_card_name="Invoice"] .widget.number-widget-box::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
-
-  background-color: #ffffff;
-  border: 1px solid #20a4e5;
-
-  /* 🧾 Invoice icon */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2320a4e5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2h9l5 5v15a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M8 13h8'/%3E%3Cpath d='M8 17h5'/%3E%3C/svg%3E");
-
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 22px;
-}
-
-
-[number_card_name="Customer"] .widget.number-widget-box::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
-
-  background-color: #ffffff;
-  border: 1px solid #20a4e5;
-
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2320a4e5'%3E%3Cpath d='M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
-
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 22px;
-}
-
-[number_card_name="Calls"] .widget.number-widget-box::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
-
-  background-color: #ffffff;
-  border: 1px solid #20a4e5;
-
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2320a4e5'%3E%3Cpath d='M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
-
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 22px;
-}
-
-[number_card_name="Today Meeting"] .widget.number-widget-box::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
-
-  background-color: #ffffff;
-  border: 1px solid #20a4e5;
-
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2320a4e5'%3E%3Cpath d='M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
-
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 22px;
+/* Three-dot Dropdown Menu Overlay FIX (Brings dropdown to front without altering dropdown menu box styles) */
+.widget.number-widget-box .dropdown-menu,
+.widget-control .dropdown-menu,
+.widget .dropdown-menu,
+.card-actions .dropdown-menu {
+  z-index: 99999 !important;
 }
 
 .widget.number-widget-box,

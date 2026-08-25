@@ -5,8 +5,11 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "customer_details_tab",
   "section_break_zxuz",
   "business_person_name",
+  "column_break_azbu",
+  "lead",
   "customer_details_section",
   "customer_name",
   "company_name",
@@ -14,18 +17,22 @@
   "phone_number",
   "email",
   "customer_type",
-  "remarks",
+  "customer_status",
   "column_break_dgoa",
   "country",
   "state",
   "city",
   "billing_address",
-  "lead",
+  "remarks",
   "section_break_ngli",
   "location",
   "section_break_spsn",
-  "is_old_customer",
-  "owner_name"
+  "owner_name",
+  "opening_balance_details_tab",
+  "opening_balance",
+  "initial_opening_balance",
+  "total_advance_amount",
+  "opening_balance_logs"
  ],
  "fields": [
   {
@@ -83,10 +90,37 @@
    "label": "Remarks"
   },
   {
+   "default": "0",
+   "fieldname": "opening_balance",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Opening Balance",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "initial_opening_balance",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Initial Opening Balance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_advance_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Available Advance Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_dgoa",
    "fieldtype": "Column Break"
   },
   {
+   "description": "ID of the Lead from which this record was converted",
    "fieldname": "lead",
    "fieldtype": "Read Only",
    "label": "Lead ID",
@@ -99,6 +133,16 @@
    "label": "Customer Type",
    "options": "\nSales\nPurchase",
    "placeholder": "Select Customer Type",
+   "reqd": 1
+  },
+  {
+   "default": "New Customer",
+   "fieldname": "customer_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Customer Status",
+   "options": "\nNew Customer\nOld Customer",
+   "placeholder": "Select Customer Status",
    "reqd": 1
   },
   {
@@ -126,15 +170,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "default": "0",
-   "fieldname": "is_old_customer",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "in_standard_filter": 1,
-   "label": "Is Old Customer",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_zxuz",
    "fieldtype": "Section Break"
   },
@@ -154,12 +189,33 @@
    "fieldtype": "Table",
    "label": "Location",
    "options": "Customer Location"
+  },
+  {
+   "fieldname": "column_break_azbu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Customer Details"
+  },
+  {
+   "fieldname": "opening_balance_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Opening Balance Details"
+  },
+  {
+   "fieldname": "opening_balance_logs",
+   "fieldtype": "Table",
+   "label": "Opening Balance Usage Log",
+   "options": "Customer Opening Balance Log",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-03 17:58:09.851258",
+ "modified": "2026-08-19 16:20:14.423208",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Customer",

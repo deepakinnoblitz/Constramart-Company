@@ -40,6 +40,17 @@ frappe.ui.form.on("Invoice", {
             }
         );
 
+        // SMART LIVE REFRESH for Advance Amount Paid
+        if (frm.fields_dict.advance_amount_paid && frm.fields_dict.advance_amount_paid.input) {
+            $(frm.fields_dict.advance_amount_paid.input).off("input.adv_live").on("input.adv_live", function () {
+                let val = flt($(this).val());
+                frm.doc.advance_amount_paid = val;
+                if (window.calculate_totals_live) {
+                    window.calculate_totals_live(frm);
+                }
+            });
+        }
+
         // Lock Purchase ID after save to prevent breaking the link
         if (!frm.is_new()) {
             frm.set_df_property("purchase_id", "read_only", 1);
@@ -57,6 +68,7 @@ frappe.ui.form.on("Invoice", {
         // Lock form if collections exist
         if (!frm.is_new()) {
             frappe.db.count("Invoice Collection", { filters: { invoice: frm.doc.name } }).then(count => {
+                frm.set_intro(null);
                 if (count > 0) {
                     frm.set_read_only();
                     frm.disable_save();
@@ -165,6 +177,18 @@ frappe.ui.form.on("Invoice", {
     converted_from_estimation(frm) {
         toggle_conversion_section(frm);
     },
+    advance_amount_paid(frm) {
+        if (window.calculate_totals_live) {
+            window.calculate_totals_live(frm);
+        }
+    },
+    after_save(frm) {
+        if (flt(frm.doc.advance_amount_paid) > 0) {
+            setTimeout(() => {
+                frm.reload_doc();
+            }, 300);
+        }
+    },
     client_name(frm) {
         if (!frm.doc.client_name) return;
 
@@ -221,19 +245,38 @@ frappe.ui.form.on("Invoice", {
         }
 
         // Validate Price > 0
-        (frm.doc.table_qecz || []).forEach(item => {
-            if (flt(item.price) <= 0) {
+        let invalid_items = (frm.doc.table_qecz || []).filter(item => flt(item.price) <= 0);
+        if (invalid_items.length > 0) {
+            frappe.validated = false;
+
+            let item_ids = invalid_items.map(i => i.service || i.items).filter(Boolean);
+            let item_map = {};
+            if (item_ids.length > 0) {
+                frappe.call({
+                    method: "company.company.api.get_item_names",
+                    args: { item_ids: item_ids },
+                    async: false,
+                    callback: function (r) {
+                        item_map = r.message || {};
+                    }
+                });
+            }
+
+            invalid_items.forEach(item => {
+                let code = item.service || item.items || "Unknown";
+                let name = item_map[code];
+                let display_name = name ? `${name} (${code})` : code;
+
                 frappe.msgprint({
                     title: __("Invalid Price"),
-                    message: __("Price cannot be 0 or less for item {0} in row {1}").format(
-                        "<b>" + (item.service || "Unknown") + "</b>", 
+                    message: __("Price cannot be 0 or less for item {0} in row {1}", [
+                        "<b>" + display_name + "</b>",
                         "<b>" + item.idx + "</b>"
-                    ),
+                    ]),
                     indicator: "red"
                 });
-                frappe.validated = false;
-            }
-        });
+            });
+        }
     },
 
     purchase_id(frm) {
