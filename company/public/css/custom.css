@@ -240,15 +240,23 @@ body.customer-locked-form .standard-actions .primary-action,
   background-color: #1e2f40 !important;
 }
 
-.level-item {
+.list-row-head .level-item,
+.list-row-head .list-row-col {
   color: #ffffff !important;
 }
 
-.list-row-col {
-  color: white !important;
+.list-row-container .level-right,
+.list-row-container .level-right .level-item,
+.list-row-container .level-right .modified,
+.list-row-container .level-right .frappe-timestamp {
+  color: #6c757d !important;
+  font-weight: 500 !important;
 }
 
-.level-right:hover {
+.list-row-container .level-right:hover,
+.list-row-container .level-right:hover .level-item,
+.list-row-container .level-right:hover .modified,
+.list-row-container .level-right:hover .frappe-timestamp {
   color: #1e2f40 !important;
 }
 

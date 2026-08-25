@@ -61,15 +61,11 @@ frappe.listview_settings['Purchase'] = {
             listview._selection_tracker_setup = true;
         }
 
-        // Patch listview refresh to auto-clear date inputs when bill_date filter is removed and restore checked state
+        // Patch listview refresh to sync date inputs with active filter_area and restore checked state
         if (!listview._date_refresh_patched) {
             let original_refresh = listview.refresh.bind(listview);
             listview.refresh = function () {
-                let has_date_filter = listview.filter_area && listview.filter_area.get().some(f => f[1] === 'bill_date');
-                if (!has_date_filter) {
-                    $('#purchase_from_date_input').val('');
-                    $('#purchase_to_date_input').val('');
-                }
+                sync_purchase_date_inputs(listview);
                 let p = original_refresh();
                 setTimeout(() => {
                     if (listview._selected_names && listview._selected_names.size) {
@@ -224,6 +220,50 @@ function setup_purchase_date_filters(listview) {
     $from_wrap.add($to_wrap).find('input').on('change clear input', function () {
         apply_purchase_date_filter(listview);
     });
+
+    sync_purchase_date_inputs(listview);
+}
+
+function sync_purchase_date_inputs(listview) {
+    if (!listview || !listview.filter_area) return;
+    let $from = $('#purchase_from_date_input');
+    let $to = $('#purchase_to_date_input');
+    if (!$from.length || !$to.length) return;
+
+    let filters = listview.filter_area.get();
+    let date_filter = filters.find(f => f[1] === 'bill_date');
+
+    if (date_filter) {
+        let op = date_filter[2];
+        let val = date_filter[3];
+
+        let from_str = null;
+        let to_str = null;
+
+        if (Array.isArray(val)) {
+            from_str = val[0];
+            to_str = val[1];
+        } else if (op === '>=' || op === '>') {
+            from_str = val;
+        } else if (op === '<=' || op === '<') {
+            to_str = val;
+        } else if (op === '=') {
+            from_str = val;
+            to_str = val;
+        }
+
+        if (from_str) {
+            let formatted_from = frappe.datetime.str_to_user(from_str);
+            if ($from.val() !== formatted_from) $from.val(formatted_from);
+        }
+        if (to_str) {
+            let formatted_to = frappe.datetime.str_to_user(to_str);
+            if ($to.val() !== formatted_to) $to.val(formatted_to);
+        }
+    } else {
+        if ($from.val() !== '') $from.val('');
+        if ($to.val() !== '') $to.val('');
+    }
 }
 
 function apply_purchase_date_filter(listview) {
