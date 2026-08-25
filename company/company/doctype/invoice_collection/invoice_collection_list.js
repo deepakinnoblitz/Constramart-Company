@@ -15,15 +15,11 @@ frappe.listview_settings['Invoice Collection'] = {
             }, 100);
         });
 
-        // Patch listview refresh to auto-clear date inputs when collection_date filter is removed
+        // Patch listview refresh to sync date inputs with active filter_area
         if (!listview._date_refresh_patched) {
             let original_refresh = listview.refresh.bind(listview);
             listview.refresh = function () {
-                let has_date_filter = listview.filter_area && listview.filter_area.get().some(f => f[1] === 'collection_date');
-                if (!has_date_filter) {
-                    $('#sales_coll_from_date_input').val('');
-                    $('#sales_coll_to_date_input').val('');
-                }
+                sync_sales_collection_date_inputs(listview);
                 return original_refresh();
             };
             listview._date_refresh_patched = true;
@@ -128,6 +124,50 @@ function setup_sales_collection_date_filters(listview) {
     $from_wrap.add($to_wrap).find('input').on('change clear input', function () {
         apply_sales_collection_date_filter(listview);
     });
+
+    sync_sales_collection_date_inputs(listview);
+}
+
+function sync_sales_collection_date_inputs(listview) {
+    if (!listview || !listview.filter_area) return;
+    let $from = $('#sales_coll_from_date_input');
+    let $to = $('#sales_coll_to_date_input');
+    if (!$from.length || !$to.length) return;
+
+    let filters = listview.filter_area.get();
+    let date_filter = filters.find(f => f[1] === 'collection_date');
+
+    if (date_filter) {
+        let op = date_filter[2];
+        let val = date_filter[3];
+
+        let from_str = null;
+        let to_str = null;
+
+        if (Array.isArray(val)) {
+            from_str = val[0];
+            to_str = val[1];
+        } else if (op === '>=' || op === '>') {
+            from_str = val;
+        } else if (op === '<=' || op === '<') {
+            to_str = val;
+        } else if (op === '=') {
+            from_str = val;
+            to_str = val;
+        }
+
+        if (from_str) {
+            let formatted_from = frappe.datetime.str_to_user(from_str);
+            if ($from.val() !== formatted_from) $from.val(formatted_from);
+        }
+        if (to_str) {
+            let formatted_to = frappe.datetime.str_to_user(to_str);
+            if ($to.val() !== formatted_to) $to.val(formatted_to);
+        }
+    } else {
+        if ($from.val() !== '') $from.val('');
+        if ($to.val() !== '') $to.val('');
+    }
 }
 
 function apply_sales_collection_date_filter(listview) {
