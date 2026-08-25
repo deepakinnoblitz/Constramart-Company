@@ -87,6 +87,8 @@ class PurchaseCollection(Document):
 			# 2. Opening Balance Deduction
 			if self.use_opening_balance:
 				current_ob = float(getattr(self, "opening_balance_deduction", 0.0) or 0.0)
+				if current_ob == 0 and self.available_opening_balance > 0 and rem_after_adv > 0:
+					current_ob = min(self.available_opening_balance, rem_after_adv)
 				ob_ded = min(self.available_opening_balance, min(rem_after_adv, current_ob))
 				self.opening_balance_deduction = ob_ded
 			else:

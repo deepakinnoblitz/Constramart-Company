@@ -145,6 +145,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
    "fieldname": "section_break_fiph",
    "fieldtype": "Section Break",
    "label": "Advance Payment Details"
@@ -192,7 +193,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0",
+   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0||doc.use_opening_balance==1",
    "fieldname": "available_opening_balance",
    "fieldtype": "Currency",
    "label": "Available Opening Balance",
@@ -205,7 +206,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0",
+   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0||doc.use_opening_balance==1",
    "fieldname": "use_opening_balance",
    "fieldtype": "Check",
    "label": "Use Opening Balance"

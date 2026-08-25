@@ -2647,22 +2647,17 @@ def get_customer_balances(customer_id, current_collection=None):
     if not customer_id:
         return {"opening_balance": 0, "available_advance": 0}
     
-    cust_data = frappe.db.get_value("Customer", customer_id, ["opening_balance", "initial_opening_balance"], as_dict=True) or {}
-    init_ob = float(cust_data.get("initial_opening_balance") or cust_data.get("opening_balance") or 0.0)
+    # Live opening_balance on Customer record (already maintained by sync_customer_opening_balance_logs)
+    current_ob = float(frappe.db.get_value("Customer", customer_id, "opening_balance") or 0.0)
 
-    other_ob_deducted = frappe.db.sql("""
-        SELECT COALESCE(SUM(opening_balance_deduction), 0)
-        FROM `tabInvoice Collection`
-        WHERE customer_id = %s AND name != %s
-    """, (customer_id, current_collection or ""))[0][0] or 0
+    # If editing an existing collection, add back its own deduction and subtract its excess
+    if current_collection and frappe.db.exists("Invoice Collection", current_collection):
+        curr_doc = frappe.db.get_value("Invoice Collection", current_collection, ["opening_balance_deduction", "excess_amount"], as_dict=True) or {}
+        curr_deduction = float(curr_doc.get("opening_balance_deduction") or 0.0)
+        curr_excess = float(curr_doc.get("excess_amount") or 0.0)
+        current_ob = current_ob + curr_deduction - curr_excess
 
-    other_excess = frappe.db.sql("""
-        SELECT COALESCE(SUM(excess_amount), 0)
-        FROM `tabInvoice Collection`
-        WHERE customer_id = %s AND name != %s
-    """, (customer_id, current_collection or ""))[0][0] or 0
-
-    avail_ob = max(0.0, init_ob - float(other_ob_deducted) + float(other_excess))
+    avail_ob = max(0.0, current_ob)
     
     adv_collections = frappe.db.sql("""
         SELECT COALESCE(SUM(amount_collected), 0)
