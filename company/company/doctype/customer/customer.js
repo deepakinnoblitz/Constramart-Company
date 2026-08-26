@@ -41,7 +41,6 @@ frappe.ui.form.on("Customer", {
         }
 
         frm.trigger("set_city_state");
-        frm.trigger("render_location_trash_icons");
 
         // 🔒 Lock Opening Balance if Sales Bills (Invoices) or Purchase Bills exist
         if (!frm.is_new() && frm.doc.name) {
@@ -105,67 +104,6 @@ frappe.ui.form.on("Customer", {
         }, __("Add Opening Balance"), __("Add Amount"));
     },
 
-    render_location_trash_icons(frm) {
-        const grid = frm.get_field("location").grid;
-        // Small delay to ensure grid is fully rendered
-        setTimeout(() => {
-            grid.wrapper.find(".grid-row").each(function () {
-                const $row = $(this);
-                const name = $row.attr("data-name");
-                if (!name || name === "new-row" || name.startsWith("new-customer-location")) return;
-
-                // Find the action column (where pencil is)
-                const action_area = $row.find(".btn-open-row").parent();
-                if (action_area.length && !$row.find(".custom-grid-delete").length) {
-                    const $trash = $(`
-                        <a class="custom-grid-delete" title="Delete Location" style="
-                            margin-left: 10px; cursor: pointer; color: #d63232;
-                            display: inline-flex; vertical-align: middle; padding: 3px; border-radius: 4px;
-                        ">
-                            <svg class="icon icon-sm" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#icon-delete"></use></svg>
-                        </a>
-                    `);
-
-                    $trash.on("click", (e) => {
-                        e.preventDefault(); e.stopPropagation();
-                        console.log("Trash icon clicked for row:", name);
-                        if (frm.events.handle_custom_location_delete) {
-                            frm.events.handle_custom_location_delete(frm, name);
-                        } else {
-                            // Fallback to trigger
-                            frm.trigger("handle_custom_location_delete", name);
-                        }
-                    });
-
-                    action_area.append($trash);
-                }
-            });
-        }, 300);
-    },
-
-    handle_custom_location_delete(frm, row_name) {
-        const row = locals["Customer Location"][row_name];
-        if (!row) return;
-
-        frappe.confirm(
-            __("Are you sure you want to permanently delete location '<b>{0}</b>'?<br><br>This will check for linked Invoices before deleting.", [row.location_name]),
-            () => {
-                frappe.call({
-                    method: "company.company.api.delete_customer_location",
-                    args: { row_name: row_name },
-                    callback: function (r) {
-                        if (r.message && r.message.status === "success") {
-                            frappe.show_alert({ message: __("Location deleted"), indicator: "green" });
-                            frm.reload_doc();
-                        } else if (r.message && r.message.status === "error") {
-                            frappe.msgprint({ title: __("Cannot Delete"), message: r.message.message, indicator: "red" });
-                        }
-                    }
-                });
-            }
-        );
-    },
-
 
 
     country(frm) {
@@ -206,8 +144,8 @@ frappe.ui.form.on("Customer", {
                 if (has_links) {
                     frm.set_read_only();
                     frm.disable_save();
-                    frm.wrapper.addClass("customer-locked-form");
-                    frm.page.wrapper.addClass("customer-locked-form");
+                    $(frm.wrapper).addClass("customer-locked-form");
+                    $(frm.page.wrapper).addClass("customer-locked-form");
                     $(".page-head, .page-actions, body").addClass("customer-locked-form");
 
                     // Disable all fields
@@ -223,11 +161,8 @@ frappe.ui.form.on("Customer", {
                         if (df.fieldtype === "Table") {
                             const field = frm.get_field(df.fieldname);
                             if (df.fieldname === "location") {
-                                // Enable grid but restrict actions
+                                // Enable grid but hide Add Row button
                                 field.grid.toggle_enable(true);
-                                field.grid.cannot_add_rows = true;
-                                
-                                // Hide the 'Add Row' button even if it's enabled
                                 field.grid.wrapper.find(".grid-add-row").hide();
                                 
                                 // Hide the Pencil icon (Edit) to ensure 'Delete Only' 
@@ -252,13 +187,13 @@ frappe.ui.form.on("Customer", {
                     // Disable Save and hide Save button completely
                     frm.disable_save();
                     frm.page.clear_primary_action();
-                    frm.page.wrapper.find(".primary-action, .btn-primary, [data-label='Save']").hide();
+                    $(frm.page.wrapper).find(".primary-action, .btn-primary, [data-label='Save']").hide();
 
                     let attempts = 0;
                     let timer = setInterval(() => {
                         attempts++;
                         frm.page.clear_primary_action();
-                        frm.page.wrapper.find(".primary-action, .btn-primary, [data-label='Save']").hide();
+                        $(frm.page.wrapper).find(".primary-action, .btn-primary, [data-label='Save']").hide();
                         if (attempts > 5) clearInterval(timer);
                     }, 100);
 
@@ -273,7 +208,7 @@ frappe.ui.form.on("Customer", {
                     frm._alert_shown = true;
 
                 } else {
-                    frm.wrapper.removeClass("customer-locked-form");
+                    $(frm.wrapper).removeClass("customer-locked-form");
                     $("body").removeClass("customer-locked-form");
                     // Unlock when no links
                     frm.meta.fields.forEach(df => {
@@ -308,27 +243,24 @@ frappe.ui.form.on("Customer", {
 
 // === Location Deletion Sync ===
 frappe.ui.form.on("Customer Location", {
-    location_on_grid_refresh: function (frm) {
-        frm.trigger("render_location_trash_icons");
-    },
     before_location_remove: function (frm, cdt, cdn) {
-        // Only override if the main form is locked (links exist)
-        let is_locked = !frm.is_save_allowed() || (frm.get_field("customer_name")?.df.read_only && !frm.is_new());
-        if (!is_locked) return;
-
         let row = locals[cdt][cdn];
+        if (!row) return;
         
-        // If it's a new row not yet saved, allow standard Frappe deletion
-        if (!row || !row.name || row.name.startsWith("new-customer-location")) return;
+        // If it's a new row not yet saved in DB, clear it from local state
+        if (!row.name || row.name.startsWith("new-customer-location")) {
+            frappe.model.clear_doc(cdt, cdn);
+            frm.refresh_field("location");
+            return false;
+        }
 
-        // Permanent deletion from database
+        // Permanent deletion from database with invoice check
         frappe.confirm(
-            __("Are you sure you want to permanently delete location '<b>{0}</b>'?<br><br>This will check for linked Invoices before deleting.", [row.location_name]),
+            __("Are you sure you want to permanently delete location '<b>{0}</b>'?<br><br>This will check for linked Invoices before deleting.", [row.location_name || row.name]),
             () => {
                 frappe.call({
-                    method: "company.company.company.api.delete_customer_location",
+                    method: "company.company.api.delete_customer_location",
                     args: { row_name: row.name },
-                    btn: $('.locked-location-grid .grid-row[data-name="' + row.name + '"] .grid-static-col .octicon-trash'),
                     callback: function (r) {
                         if (r.message && r.message.status === "success") {
                             frappe.show_alert({ message: __("Location deleted successfully"), indicator: "green" });
@@ -345,12 +277,10 @@ frappe.ui.form.on("Customer Location", {
                 });
             },
             () => {
-                // On Cancel: Reload to restore the row in UI
                 frm.reload_doc();
             }
         );
 
-        // Return false to prevent standard Frappe row removal (which requires a Save click)
         return false;
     }
 });
