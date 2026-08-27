@@ -207,8 +207,8 @@ def get_data(filters, is_export=False):
 
         # Total collected up to this point
         d.total_collected = invoice_running_total[inv_name]
-        # Pending after this specific collection
-        d.amount_pending = flt(d.grand_total) - d.total_collected
+        # Pending after this specific collection (capped at max 0.0 to prevent negative pending)
+        d.amount_pending = max(0.0, flt(d.grand_total) - d.total_collected)
         processed_data.append(d)
 
     # Handle 'show_only_last_collection' in Python
@@ -245,7 +245,9 @@ def get_summary(data):
             # Add invoice-level totals only once (from the latest available record for this invoice)
             total_inv += flt(d.get("grand_total"))
             total_collected += flt(d.get("total_collected"))
-            total_pending += flt(d.get("amount_pending"))
+            total_pending += max(0.0, flt(d.get("amount_pending")))
+
+    total_pending = max(0.0, total_pending)
 
     return [
         {
