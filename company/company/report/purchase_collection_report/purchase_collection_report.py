@@ -244,8 +244,8 @@ def get_data(filters):
         # Running total collected for this purchase
         d.total_collected = purchase_running_total[purchase_id]
         
-        # New pending balance after this payment
-        d.amount_pending = flt(d.grand_total) - d.total_collected
+        # New pending balance after this payment (capped at max 0.0 to prevent negative pending)
+        d.amount_pending = max(0.0, flt(d.grand_total) - d.total_collected)
         
         processed_data.append(d)
 
@@ -277,7 +277,9 @@ def get_summary(data):
             unique_purchases.add(purchase)
             # Take the state from the first record seen (which is the latest due to DESC sort)
             total_to_pay += flt(d.get("grand_total"))
-            total_pending += flt(d.get("amount_pending"))
+            total_pending += max(0.0, flt(d.get("amount_pending")))
+
+    total_pending = max(0.0, total_pending)
 
     return [
         {
