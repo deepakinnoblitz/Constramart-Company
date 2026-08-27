@@ -69,15 +69,17 @@ class PurchaseCollection(Document):
 		self.available_advance = avail_adv
 
 		# Pending before this payment (Amount to Pay)
-		prev_applied = frappe.db.sql("""
-			SELECT COALESCE(SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END), 0)
-			FROM `tabPurchase Collection`
-			WHERE purchase = %s AND name != %s
-		""", (self.purchase, self.name or ""))[0][0] or 0
+		if self.is_new() or not self.amount_to_pay:
+			prev_applied = frappe.db.sql("""
+				SELECT COALESCE(SUM(CASE WHEN is_advance = 1 THEN amount_paid ELSE (amount_paid + advance_adjusted - excess_amount) END), 0)
+				FROM `tabPurchase Collection`
+				WHERE purchase = %s AND name != %s AND creation < %s
+			""", (self.purchase, self.name or "", self.creation or "9999-12-31 23:59:59"))[0][0] or 0
 
-		pending_before = float(purchase.grand_total) - float(prev_applied)
-		pending_before = max(0.0, pending_before)
-		self.amount_to_pay = pending_before
+			pending_before = max(0.0, float(purchase.grand_total) - float(prev_applied))
+			self.amount_to_pay = pending_before
+		else:
+			pending_before = float(self.amount_to_pay or 0.0)
 
 		if not self.is_advance:
 			# 1. Advance Adjustment

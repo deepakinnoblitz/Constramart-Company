@@ -132,32 +132,33 @@ frappe.ui.form.on("Invoice Collection", {
 
             frm.set_value("customer_id", invoice_doc.customer_id);
 
-            let filters = { invoice: frm.doc.invoice };
-            if (frm.doc.name && !frm.is_new()) {
-                filters["name"] = ["!=", frm.doc.name];
-            }
+            if (frm.is_new()) {
+                let filters = { invoice: frm.doc.invoice };
+                frappe.db.get_list("Invoice Collection", {
+                    filters: filters,
+                    fields: ["amount_collected", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
+                }).then(existing => {
+                    let total_applied = 0;
+                    if (existing && existing.length) {
+                        total_applied = existing.reduce((sum, r) => {
+                            if (r.is_advance) {
+                                return sum + flt(r.amount_collected);
+                            } else {
+                                return sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount));
+                            }
+                        }, 0);
+                    }
 
-            frappe.db.get_list("Invoice Collection", {
-                filters: filters,
-                fields: ["amount_collected", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
-            }).then(existing => {
-                let total_applied = 0;
-                if (existing && existing.length) {
-                    total_applied = existing.reduce((sum, r) => {
-                        if (r.is_advance) {
-                            return sum + flt(r.amount_collected);
-                        } else {
-                            return sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount));
-                        }
-                    }, 0);
-                }
+                    const remaining = invoice_doc.grand_total - total_applied;
+                    frm.set_value("amount_to_pay", Math.max(0, remaining));
 
-                const remaining = invoice_doc.grand_total - total_applied;
-                frm.set_value("amount_to_pay", Math.max(0, remaining));
-
-                // Fetch customer balances and recalculate
+                    // Fetch customer balances and recalculate
+                    frm.trigger("fetch_balances");
+                });
+            } else {
+                // Existing saved collection record - preserve historical amount_to_pay
                 frm.trigger("fetch_balances");
-            });
+            }
         });
     },
 
