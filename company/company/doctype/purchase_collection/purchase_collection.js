@@ -130,33 +130,33 @@ frappe.ui.form.on("Purchase Collection", {
             frm.set_value("vendor_id", purchase_doc.vendor_id);
             frm.set_value("vendor_name", purchase_doc.vendor_name);
 
-            // Fetch previous collections for this purchase
-            let filters = { purchase: frm.doc.purchase };
-            if (frm.doc.name && !frm.is_new()) {
-                filters["name"] = ["!=", frm.doc.name];
-            }
+            if (frm.is_new()) {
+                let filters = { purchase: frm.doc.purchase };
+                frappe.db.get_list("Purchase Collection", {
+                    filters: filters,
+                    fields: ["amount_paid", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
+                }).then(existing => {
+                    let total_applied = 0;
+                    if (existing && existing.length) {
+                        total_applied = existing.reduce((sum, r) => {
+                            if (r.is_advance) {
+                                return sum + flt(r.amount_paid);
+                            } else {
+                                return sum + (flt(r.amount_paid) + flt(r.advance_adjusted) - flt(r.excess_amount));
+                            }
+                        }, 0);
+                    }
 
-            frappe.db.get_list("Purchase Collection", {
-                filters: filters,
-                fields: ["amount_paid", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
-            }).then(existing => {
-                let total_applied = 0;
-                if (existing && existing.length) {
-                    total_applied = existing.reduce((sum, r) => {
-                        if (r.is_advance) {
-                            return sum + flt(r.amount_paid);
-                        } else {
-                            return sum + (flt(r.amount_paid) + flt(r.advance_adjusted) - flt(r.excess_amount));
-                        }
-                    }, 0);
-                }
+                    const remaining = purchase_doc.grand_total - total_applied;
+                    frm.set_value("amount_to_pay", Math.max(0, remaining));
 
-                const remaining = purchase_doc.grand_total - total_applied;
-                frm.set_value("amount_to_pay", Math.max(0, remaining));
-
-                // Fetch vendor balances and recalculate
+                    // Fetch vendor balances and recalculate
+                    frm.trigger("fetch_balances");
+                });
+            } else {
+                // Existing saved collection record - preserve historical amount_to_pay
                 frm.trigger("fetch_balances");
-            });
+            }
         });
     },
 
