@@ -209,6 +209,34 @@ frappe.ui.form.on("Purchase Collection", {
             return;
         }
 
+        // On saved documents (!frm.is_new()), preserve exact DB value of available_opening_balance stored on document!
+        if (!frm.is_new()) {
+            if (frm.doc.purchase) {
+                frappe.db.get_list("Purchase", {
+                    filters: { vendor_id: frm.doc.vendor_id },
+                    order_by: "creation desc",
+                    limit: 1,
+                    fields: ["name"]
+                }).then(latest_purc => {
+                    if (latest_purc && latest_purc.length && latest_purc[0].name !== frm.doc.purchase) {
+                        frm.set_df_property("use_opening_balance", "read_only", 1);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                        frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Purchase Order ({0}) for this Vendor.</span>", [latest_purc[0].name]));
+                        frm.set_intro(__("Opening Balance can only be used on the latest Purchase Order ({0}) for this Vendor.", [latest_purc[0].name]), "orange");
+                    } else {
+                        frm.set_df_property("use_opening_balance", "read_only", 0);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                        frm.set_df_property("use_opening_balance", "description", null);
+                    }
+                    recalculate_breakdown(frm);
+                });
+            } else {
+                recalculate_breakdown(frm);
+            }
+            return;
+        }
+
+        // For NEW documents (frm.is_new()): fetch live available balances from Customer
         frappe.call({
             method: "frappe.client.get",
             args: { doctype: "Customer", name: vendor_id },
@@ -222,7 +250,29 @@ frappe.ui.form.on("Purchase Collection", {
                         frm.set_value("use_opening_balance", 0);
                         frm.set_value("opening_balance_deduction", 0);
                     }
-                    recalculate_breakdown(frm);
+
+                    // Check if selected purchase is the LATEST Purchase for this Vendor
+                    if (frm.doc.purchase) {
+                        frappe.db.get_list("Purchase", {
+                            filters: { vendor_id: frm.doc.vendor_id },
+                            order_by: "creation desc",
+                            limit: 1,
+                            fields: ["name"]
+                        }).then(latest_purc => {
+                            if (latest_purc && latest_purc.length && latest_purc[0].name !== frm.doc.purchase) {
+                                frm.set_df_property("use_opening_balance", "read_only", 1);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                                frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Purchase Order ({0}) for this Vendor.</span>", [latest_purc[0].name]));
+                            } else {
+                                frm.set_df_property("use_opening_balance", "read_only", 0);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                                frm.set_df_property("use_opening_balance", "description", null);
+                            }
+                            recalculate_breakdown(frm);
+                        });
+                    } else {
+                        recalculate_breakdown(frm);
+                    }
                 }
             }
         });
@@ -301,6 +351,9 @@ function recalculate_breakdown(frm) {
 }
 
 function toggle_advance_field(frm) {
+    const show_advance_section = (flt(frm.doc.available_advance) > 0 || flt(frm.doc.advance_adjusted) > 0 || frm.doc.is_advance == 1);
+    frm.set_df_property("section_break_fiph", "hidden", show_advance_section ? 0 : 1);
+
     if (frm.doc.is_advance) {
         frm.set_df_property("is_advance", "hidden", 0);
         return;
