@@ -2506,3 +2506,35 @@ button.btn.btn-default.ellipsis[data-toggle="dropdown"][aria-expanded="true"] sv
   padding: 0 !important;
   margin: 0 !important;
 }
+
+/* =======================================================
+   CHECKBOX CONTROL VERTICAL ALIGNMENT
+   ======================================================= */
+.frappe-control[data-fieldtype="Check"] .checkbox label,
+.frappe-control[data-fieldname="use_opening_balance"] .checkbox label,
+.frappe-control[data-fieldname="is_advance"] .checkbox label {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-bottom: 0 !important;
+  line-height: 1.4 !important;
+  gap: 8px !important;
+}
+
+.frappe-control[data-fieldtype="Check"] input[type="checkbox"],
+.frappe-control[data-fieldname="use_opening_balance"] input[type="checkbox"],
+.frappe-control[data-fieldname="is_advance"] input[type="checkbox"] {
+  margin: 0 !important;
+  vertical-align: middle !important;
+  position: relative !important;
+  top: 0 !important;
+}
+
+.frappe-control[data-fieldtype="Check"] .label-area,
+.frappe-control[data-fieldname="use_opening_balance"] .label-area,
+.frappe-control[data-fieldname="is_advance"] .label-area {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

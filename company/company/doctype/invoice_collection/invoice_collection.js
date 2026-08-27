@@ -198,6 +198,36 @@ frappe.ui.form.on("Invoice Collection", {
 
     fetch_balances(frm) {
         if (!frm.doc.customer_id) return;
+
+        // On saved documents (!frm.is_new()), preserve the exact DB value of available_opening_balance stored on the document!
+        if (!frm.is_new()) {
+            if (frm.doc.invoice) {
+                frappe.db.get_list("Invoice", {
+                    filters: { customer_id: frm.doc.customer_id },
+                    order_by: "creation desc",
+                    limit: 1,
+                    fields: ["name"]
+                }).then(latest_inv => {
+                    if (latest_inv && latest_inv.length && latest_inv[0].name !== frm.doc.invoice) {
+                        // Older invoice for customer -> make Use Opening Balance & Deduction Read-Only
+                        frm.set_df_property("use_opening_balance", "read_only", 1);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                        frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
+                    } else {
+                        // Latest invoice for customer -> allow editing Use Opening Balance
+                        frm.set_df_property("use_opening_balance", "read_only", 0);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                        frm.set_df_property("use_opening_balance", "description", null);
+                    }
+                    recalculate_breakdown(frm);
+                });
+            } else {
+                recalculate_breakdown(frm);
+            }
+            return;
+        }
+
+        // For NEW documents (frm.is_new()): fetch live available balances from Customer
         frappe.call({
             method: "company.company.api.get_customer_balances",
             args: {
@@ -208,7 +238,32 @@ frappe.ui.form.on("Invoice Collection", {
                 if (r.message) {
                     frm.set_value("available_opening_balance", r.message.opening_balance || 0);
                     frm.set_value("available_advance", r.message.available_advance || 0);
-                    recalculate_breakdown(frm);
+
+                    // Check if selected invoice is the LATEST Sales Invoice for this Customer
+                    if (frm.doc.invoice) {
+                        frappe.db.get_list("Invoice", {
+                            filters: { customer_id: frm.doc.customer_id },
+                            order_by: "creation desc",
+                            limit: 1,
+                            fields: ["name"]
+                        }).then(latest_inv => {
+                            if (latest_inv && latest_inv.length && latest_inv[0].name !== frm.doc.invoice) {
+                                // Older invoice for customer -> make Use Opening Balance & Deduction Read-Only
+                                frm.set_df_property("use_opening_balance", "read_only", 1);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                                frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
+                                frm.set_intro(__("Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.", [latest_inv[0].name]), "orange");
+                            } else {
+                                // Latest invoice for customer -> allow editing Use Opening Balance
+                                frm.set_df_property("use_opening_balance", "read_only", 0);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                                frm.set_df_property("use_opening_balance", "description", null);
+                            }
+                            recalculate_breakdown(frm);
+                        });
+                    } else {
+                        recalculate_breakdown(frm);
+                    }
                 }
             }
         });
@@ -305,19 +360,20 @@ function recalculate_breakdown(frm) {
 }
 
 function toggle_advance_field(frm) {
+    const show_advance_section = (flt(frm.doc.available_advance) > 0 || flt(frm.doc.advance_adjusted) > 0 || frm.doc.is_advance == 1);
+    frm.set_df_property("section_break_wcnb", "hidden", show_advance_section ? 0 : 1);
+
     if (frm.doc.is_advance) {
         frm.set_df_property("is_advance", "hidden", 0);
         return;
     }
 
     if (frm.is_new()) {
-        // Hide Is Advance checkbox on new collection forms
         frm.set_df_property("is_advance", "hidden", 1);
         return;
     }
 
     if (!frm.doc.invoice) {
-        // No invoice selected - hide advance checkbox
         frm.set_df_property("is_advance", "hidden", 1);
         return;
     }
@@ -329,7 +385,7 @@ function toggle_advance_field(frm) {
             doctype: "Invoice Collection",
             filters: {
                 invoice: frm.doc.invoice,
-                name: ["!=", frm.doc.name || ""]  // Exclude current doc if editing
+                name: ["!=", frm.doc.name || ""]
             }
         },
         callback: function (r) {
