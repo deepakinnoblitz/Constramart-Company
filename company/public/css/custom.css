@@ -33,17 +33,13 @@
   margin-top: 0 !important;
 }
 
-/* Permanently hide Save button on locked Customer forms */
-body.customer-locked-form .page-actions .btn-primary,
-body.customer-locked-form .page-actions .primary-action,
-body.customer-locked-form [data-label="Save"],
-body.customer-locked-form button.primary-action,
-body.customer-locked-form .standard-actions .btn-primary,
-body.customer-locked-form .standard-actions .primary-action,
-.customer-locked-form .page-actions .btn-primary,
-.customer-locked-form .page-actions .primary-action,
-.customer-locked-form [data-label="Save"],
-.customer-locked-form button.primary-action {
+/* Permanently hide Save button on locked Customer forms (excluding modal dialogs) */
+body.customer-locked-form .page-head .page-actions .btn-primary,
+body.customer-locked-form .page-head .page-actions .primary-action,
+body.customer-locked-form .page-head [data-label="Save"],
+body.customer-locked-form .page-head button.primary-action,
+body.customer-locked-form .page-head .standard-actions .btn-primary,
+body.customer-locked-form .page-head .standard-actions .primary-action {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -53,6 +49,19 @@ body.customer-locked-form .standard-actions .primary-action,
   margin: 0 !important;
   border: none !important;
   pointer-events: none !important;
+}
+
+/* Ensure modal dialog buttons are ALWAYS visible */
+.modal-dialog .btn-primary,
+.modal-dialog button.primary-action,
+.modal-footer .btn-primary,
+.modal-footer button.primary-action {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  pointer-events: auto !important;
 }
 
 :root {

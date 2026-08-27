@@ -66,24 +66,33 @@ frappe.ui.form.on("Customer", {
     },
 
     prompt_add_opening_balance(frm) {
-        frappe.prompt([
-            {
-                fieldname: "amount",
-                fieldtype: "Currency",
-                label: __("Opening Balance Amount to Add"),
-                reqd: 1
-            },
-            {
-                fieldname: "remarks",
-                fieldtype: "Small Text",
-                label: __("Remarks"),
-                default: "Additional Opening Balance added"
-            }
-        ], function (values) {
+        let d = new frappe.ui.Dialog({
+            title: __("Add Opening Balance"),
+            fields: [
+                {
+                    fieldname: "amount",
+                    fieldtype: "Currency",
+                    label: __("Opening Balance Amount to Add"),
+                    reqd: 1
+                },
+                {
+                    fieldname: "remarks",
+                    fieldtype: "Small Text",
+                    label: __("Remarks"),
+                    default: "Additional Opening Balance added"
+                }
+            ]
+        });
+
+        d.set_primary_action(__("Add Amount"), function () {
+            let values = d.get_values();
+            if (!values) return;
+
             if (flt(values.amount) <= 0) {
                 frappe.msgprint(__("Amount must be greater than 0"));
                 return;
             }
+
             frappe.call({
                 method: "company.company.api.add_customer_opening_balance",
                 args: {
@@ -93,6 +102,7 @@ frappe.ui.form.on("Customer", {
                 },
                 callback: function (r) {
                     if (r.message) {
+                        d.hide();
                         frappe.show_alert({
                             message: __("Added ₹{0} to Opening Balance", [format_currency(values.amount)]),
                             indicator: "green"
@@ -101,7 +111,9 @@ frappe.ui.form.on("Customer", {
                     }
                 }
             });
-        }, __("Add Opening Balance"), __("Add Amount"));
+        });
+
+        d.show();
     },
 
 
@@ -184,16 +196,16 @@ frappe.ui.form.on("Customer", {
                         }
                     });
 
-                    // Disable Save and hide Save button completely
+                    // Disable Save and hide Save button completely on page header (not in dialogs)
                     frm.disable_save();
                     frm.page.clear_primary_action();
-                    $(frm.page.wrapper).find(".primary-action, .btn-primary, [data-label='Save']").hide();
+                    $(frm.page.wrapper).find(".page-head .primary-action, .page-head .btn-primary, .page-actions .btn-primary").hide();
 
                     let attempts = 0;
                     let timer = setInterval(() => {
                         attempts++;
                         frm.page.clear_primary_action();
-                        $(frm.page.wrapper).find(".primary-action, .btn-primary, [data-label='Save']").hide();
+                        $(frm.page.wrapper).find(".page-head .primary-action, .page-head .btn-primary, .page-actions .btn-primary").hide();
                         if (attempts > 5) clearInterval(timer);
                     }, 100);
 
