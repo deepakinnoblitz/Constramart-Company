@@ -1,8 +1,40 @@
 frappe.ui.form.on("Invoice Collection", {
+    setup(frm) {
+        frm.set_query("invoice", function () {
+            let filters = {
+                balance_amount: [">", 0]
+            };
+            if (frm.doc.customer_id) {
+                filters["customer_id"] = frm.doc.customer_id;
+            }
+            return {
+                filters: filters
+            };
+        });
+    },
+
+    before_save(frm) {
+        if (flt(frm.doc.excess_amount) > 0 && !frm._excess_confirmed) {
+            frappe.validated = false;
+            frappe.confirm(
+                __("An excess collection of <b>{0}</b> will be credited to the customer's Opening Balance.<br><br>Do you want to proceed?", [format_currency(frm.doc.excess_amount)]),
+                function () {
+                    frm._excess_confirmed = true;
+                    frm.save();
+                },
+                function () {
+                    frm._excess_confirmed = false;
+                }
+            );
+        } else {
+            frm._excess_confirmed = false;
+        }
+    },
+
     refresh(frm) {
         toggle_advance_field(frm);
 
-        if (!frm.is_new()) {
+        if (!frm.is_new() && !frm.doc.is_advance) {
             // Check if this is the last collection for the invoice
             frappe.call({
                 method: "frappe.client.get_list",
@@ -40,59 +72,205 @@ frappe.ui.form.on("Invoice Collection", {
             });
         }
 
-        // Show indicator for advance payments
-        if (frm.doc.is_advance) {
+        // Hide Opening Balance Details section for Advance Collections
+        frm.set_df_property("opening_balance_details_section", "hidden", frm.doc.is_advance ? 1 : 0);
+
+        // Lock Advance Payment collections from manual editing
+        if (!frm.is_new() && frm.doc.is_advance) {
+            frm.disable_save();
+            frm.set_read_only();
+            if (frm.doc.invoice) {
+                frm.set_intro(__("This is an Advance Payment linked to Sales Bill {0}. It cannot be edited directly.", [frm.doc.invoice]), "blue");
+            } else {
+                frm.set_intro(__("This is an Advance Payment entry and cannot be edited directly."), "blue");
+            }
+        } else if (frm.doc.is_advance) {
             frm.set_intro(__("This is an Advance Payment"), "blue");
         }
 
-        // Auto-calculate amount pending on input
+        // Auto-calculate breakdown on input
         if (frm.fields_dict.amount_collected) {
             $(frm.fields_dict.amount_collected.input).on("input", function () {
-                const pay = frm.doc.amount_to_pay || 0;
-                const collected_now = flt($(this).val());
-                frm.set_value("amount_pending", pay - collected_now);
+                recalculate_breakdown(frm);
             });
         }
-        if (frm.is_new()) {
-            frm.set_query("invoice", function () {
-                return {
-                    filters: {
-                        "balance_amount": [">", 0]
-                    },
-                };
-            });
+
+        if (frm.doc.invoice) {
+            frm.trigger("invoice");
         }
     },
 
     invoice(frm) {
         toggle_advance_field(frm);
 
-        if (frm.doc.invoice) {
-            frappe.db.get_doc("Invoice", frm.doc.invoice).then(invoice_doc => {
-                frm.set_value("customer_id", invoice_doc.customer_id);
+        if (!frm.doc.invoice) {
+            frm.set_value("customer_id", "");
+            frm.set_value("customer_name", "");
+            frm.set_value("amount_to_pay", 0);
+            frm.set_value("available_opening_balance", 0);
+            frm.set_value("available_advance", 0);
+            recalculate_breakdown(frm);
+            return;
+        }
 
-                // Get total already collected for this invoice
+        frappe.db.get_doc("Invoice", frm.doc.invoice).then(invoice_doc => {
+            if (frm.is_new() && flt(invoice_doc.balance_amount) <= 0) {
+                frappe.msgprint({
+                    title: __("Fully Paid Sales Bill"),
+                    message: __("Sales Bill <b>{0}</b> is already fully paid (Balance: ₹0.00). Please select an unpaid invoice.", [frm.doc.invoice]),
+                    indicator: "orange"
+                });
+                frm.set_value("invoice", "");
+                frm.set_value("customer_id", "");
+                frm.set_value("customer_name", "");
+                frm.set_value("amount_to_pay", 0);
+                frm.set_value("available_opening_balance", 0);
+                frm.set_value("available_advance", 0);
+                recalculate_breakdown(frm);
+                return;
+            }
+
+            frm.set_value("customer_id", invoice_doc.customer_id);
+
+            if (frm.is_new()) {
+                let filters = { invoice: frm.doc.invoice };
                 frappe.db.get_list("Invoice Collection", {
-                    filters: { invoice: frm.doc.invoice },
-                    fields: ["amount_collected"]
+                    filters: filters,
+                    fields: ["amount_collected", "advance_adjusted", "opening_balance_deduction", "excess_amount", "is_advance"]
                 }).then(existing => {
-                    let total_collected = 0;
+                    let total_applied = 0;
                     if (existing && existing.length) {
-                        total_collected = existing.reduce((sum, r) => sum + (r.amount_collected || 0), 0);
+                        total_applied = existing.reduce((sum, r) => {
+                            if (r.is_advance) {
+                                return sum + flt(r.amount_collected);
+                            } else {
+                                return sum + (flt(r.amount_collected) + flt(r.advance_adjusted) - flt(r.excess_amount));
+                            }
+                        }, 0);
                     }
 
-                    const remaining = invoice_doc.grand_total - total_collected;
-                    frm.set_value("amount_to_pay", remaining);
+                    const remaining = invoice_doc.grand_total - total_applied;
+                    frm.set_value("amount_to_pay", Math.max(0, remaining));
 
-                    // Initial pending = remaining - this collection (usually 0 on load)
-                    const collected_now = frm.doc.amount_collected || 0;
-                    frm.set_value("amount_pending", remaining - collected_now);
+                    // Fetch customer balances and recalculate
+                    frm.trigger("fetch_balances");
                 });
-            });
+            } else {
+                // Existing saved collection record - preserve historical amount_to_pay
+                frm.trigger("fetch_balances");
+            }
+        });
+    },
+
+    use_opening_balance(frm) {
+        if (frm.doc.use_opening_balance) {
+            const avail_ob = flt(frm.doc.available_opening_balance);
+            const pay = flt(frm.doc.amount_to_pay);
+            const adv_adj = flt(frm.doc.advance_adjusted);
+            const max_allowed = Math.min(avail_ob, Math.max(0, pay - adv_adj));
+            frm.set_value("opening_balance_deduction", max_allowed);
+        } else {
+            frm.set_value("opening_balance_deduction", 0);
+            frm.set_value("amount_collected_using_opening_balance", 0);
         }
+        recalculate_breakdown(frm);
+    },
+
+    opening_balance_deduction(frm) {
+        const avail_ob = flt(frm.doc.available_opening_balance);
+        const pay = flt(frm.doc.amount_to_pay);
+        const adv_adj = flt(frm.doc.advance_adjusted);
+        const max_allowed = Math.min(avail_ob, Math.max(0, pay - adv_adj));
+
+        let current_ob = flt(frm.doc.opening_balance_deduction);
+        if (current_ob > max_allowed) {
+            current_ob = max_allowed;
+            frm.set_value("opening_balance_deduction", current_ob);
+        }
+
+        frm.set_value("amount_collected_using_opening_balance", current_ob);
+        recalculate_breakdown(frm);
+    },
+
+    amount_collected_normally(frm) {
+        recalculate_breakdown(frm);
+    },
+
+    fetch_balances(frm) {
+        if (!frm.doc.customer_id) return;
+
+        // On saved documents (!frm.is_new()), preserve the exact DB value of available_opening_balance stored on the document!
+        if (!frm.is_new()) {
+            if (frm.doc.invoice) {
+                frappe.db.get_list("Invoice", {
+                    filters: { customer_id: frm.doc.customer_id },
+                    order_by: "creation desc",
+                    limit: 1,
+                    fields: ["name"]
+                }).then(latest_inv => {
+                    if (latest_inv && latest_inv.length && latest_inv[0].name !== frm.doc.invoice) {
+                        // Older invoice for customer -> make Use Opening Balance & Deduction Read-Only
+                        frm.set_df_property("use_opening_balance", "read_only", 1);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                        frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
+                    } else {
+                        // Latest invoice for customer -> allow editing Use Opening Balance
+                        frm.set_df_property("use_opening_balance", "read_only", 0);
+                        frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                        frm.set_df_property("use_opening_balance", "description", null);
+                    }
+                    recalculate_breakdown(frm);
+                });
+            } else {
+                recalculate_breakdown(frm);
+            }
+            return;
+        }
+
+        // For NEW documents (frm.is_new()): fetch live available balances from Customer
+        frappe.call({
+            method: "company.company.api.get_customer_balances",
+            args: {
+                customer_id: frm.doc.customer_id,
+                current_collection: frm.doc.name || ""
+            },
+            callback: function (r) {
+                if (r.message) {
+                    frm.set_value("available_opening_balance", r.message.opening_balance || 0);
+                    frm.set_value("available_advance", r.message.available_advance || 0);
+
+                    // Check if selected invoice is the LATEST Sales Invoice for this Customer
+                    if (frm.doc.invoice) {
+                        frappe.db.get_list("Invoice", {
+                            filters: { customer_id: frm.doc.customer_id },
+                            order_by: "creation desc",
+                            limit: 1,
+                            fields: ["name"]
+                        }).then(latest_inv => {
+                            if (latest_inv && latest_inv.length && latest_inv[0].name !== frm.doc.invoice) {
+                                // Older invoice for customer -> make Use Opening Balance & Deduction Read-Only
+                                frm.set_df_property("use_opening_balance", "read_only", 1);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 1);
+                                frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
+                                frm.set_intro(__("Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.", [latest_inv[0].name]), "orange");
+                            } else {
+                                // Latest invoice for customer -> allow editing Use Opening Balance
+                                frm.set_df_property("use_opening_balance", "read_only", 0);
+                                frm.set_df_property("opening_balance_deduction", "read_only", 0);
+                                frm.set_df_property("use_opening_balance", "description", null);
+                            }
+                            recalculate_breakdown(frm);
+                        });
+                    } else {
+                        recalculate_breakdown(frm);
+                    }
+                }
+            }
+        });
     },
 
     is_advance(frm) {
+        recalculate_breakdown(frm);
         if (frm.doc.is_advance) {
             frappe.msgprint({
                 title: __("Advance Payment"),
@@ -101,6 +279,12 @@ frappe.ui.form.on("Invoice Collection", {
             });
         }
     },
+    before_save(frm) {
+        if (frm.doc.amount_collected == null || frm.doc.amount_collected === "") {
+            frm.set_value("amount_collected", 0);
+        }
+    },
+
     after_save: function (frm) {
         if (frm.doc.invoice) {
             frappe.show_alert({
@@ -110,18 +294,86 @@ frappe.ui.form.on("Invoice Collection", {
 
             // Redirect back to Invoice and reload it
             frappe.set_route("Form", "Invoice", frm.doc.invoice).then(() => {
-                const parent_frm = cur_frm;
-                if (parent_frm && parent_frm.doctype === "Invoice" && parent_frm.docname === frm.doc.invoice) {
-                    parent_frm.reload_doc();
-                }
+                setTimeout(() => {
+                    if (cur_frm && cur_frm.doctype === "Invoice") {
+                        cur_frm.reload_doc();
+                    }
+                }, 500);
             });
         }
     }
 });
 
+function recalculate_breakdown(frm) {
+    const pay = flt(frm.doc.amount_to_pay);
+    const avail_adv = flt(frm.doc.available_advance);
+    const avail_ob = flt(frm.doc.available_opening_balance);
+    const show_ob_section = !frm.doc.is_advance && (avail_ob > 0 || flt(frm.doc.opening_balance_deduction) > 0 || frm.doc.use_opening_balance == 1);
+    frm.set_df_property("opening_balance_details_section", "hidden", show_ob_section ? 0 : 1);
+
+    if (frm.doc.is_advance) {
+        const collected = flt(frm.doc.amount_collected_normally || frm.doc.amount_collected);
+        frm.set_value("advance_adjusted", collected);
+        frm.set_value("opening_balance_deduction", 0);
+        frm.set_value("amount_collected_using_opening_balance", 0);
+        frm.set_value("excess_amount", 0);
+        frm.set_value("amount_collected", collected);
+        frm.set_value("amount_pending", Math.max(0, pay - collected));
+        return;
+    }
+
+    // Step 1: Advance Adjustment
+    const adv_adj = Math.min(avail_adv, pay);
+    frm.set_value("advance_adjusted", adv_adj);
+    let rem_after_adv = pay - adv_adj;
+
+    // Step 2: Opening Balance Deduction
+    let ob_deducted = 0;
+    if (frm.doc.use_opening_balance) {
+        let current_val = flt(frm.doc.opening_balance_deduction);
+        if (current_val === 0 && avail_ob > 0 && rem_after_adv > 0) {
+            current_val = Math.min(avail_ob, rem_after_adv);
+            frm.set_value("opening_balance_deduction", current_val);
+        }
+        ob_deducted = Math.min(avail_ob, Math.min(rem_after_adv, current_val));
+    } else {
+        ob_deducted = 0;
+        frm.set_value("opening_balance_deduction", 0);
+    }
+    frm.set_df_property("amount_collected_using_opening_balance", "hidden", frm.doc.use_opening_balance ? 0 : 1);
+    frm.set_value("amount_collected_using_opening_balance", ob_deducted);
+    let rem_after_ob = rem_after_adv - ob_deducted;
+
+    // Step 3: Normal Collection & Total Amount Collected Calculation
+    const collected_normally = flt(frm.doc.amount_collected_normally || 0);
+    const total_collected = ob_deducted + collected_normally;
+    frm.set_value("amount_collected", total_collected);
+
+    let pending = rem_after_ob - collected_normally;
+    let excess = 0;
+    if (pending < 0) {
+        excess = Math.abs(pending);
+        pending = 0;
+    }
+    frm.set_value("excess_amount", excess);
+    frm.set_value("amount_pending", pending);
+}
+
 function toggle_advance_field(frm) {
+    const show_advance_section = (flt(frm.doc.available_advance) > 0 || flt(frm.doc.advance_adjusted) > 0 || frm.doc.is_advance == 1);
+    frm.set_df_property("section_break_wcnb", "hidden", show_advance_section ? 0 : 1);
+
+    if (frm.doc.is_advance) {
+        frm.set_df_property("is_advance", "hidden", 0);
+        return;
+    }
+
+    if (frm.is_new()) {
+        frm.set_df_property("is_advance", "hidden", 1);
+        return;
+    }
+
     if (!frm.doc.invoice) {
-        // No invoice selected - hide advance checkbox
         frm.set_df_property("is_advance", "hidden", 1);
         return;
     }
@@ -133,16 +385,16 @@ function toggle_advance_field(frm) {
             doctype: "Invoice Collection",
             filters: {
                 invoice: frm.doc.invoice,
-                name: ["!=", frm.doc.name || ""]  // Exclude current doc if editing
+                name: ["!=", frm.doc.name || ""]
             }
         },
         callback: function (r) {
             if (r.message > 0) {
-                // Invoice already has collections - hide and uncheck advance
-                frm.set_df_property("is_advance", "hidden", 1);
-                frm.set_value("is_advance", 0);
+                if (!frm.doc.is_advance) {
+                    frm.set_df_property("is_advance", "hidden", 1);
+                    frm.set_value("is_advance", 0);
+                }
             } else {
-                // First collection for this invoice - show advance checkbox
                 frm.set_df_property("is_advance", "hidden", 0);
             }
         }

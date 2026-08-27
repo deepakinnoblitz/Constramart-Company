@@ -14,9 +14,9 @@
   {
    "allow_in_quick_entry": 1,
    "fieldname": "customer",
-   "fieldtype": "Link",
-   "label": "Customer",
-   "options": "Customer"
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Customer"
   },
   {
    "allow_in_quick_entry": 1,
@@ -38,7 +38,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-03 16:16:13.321724",
+ "modified": "2026-08-26 18:25:04.635524",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Customer Location",

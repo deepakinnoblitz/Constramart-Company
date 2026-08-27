@@ -36,6 +36,8 @@
   "overall_discount",
   "roundoff",
   "grand_total",
+  "advance_amount_paid",
+  "advance_payment_type",
   "paid_amount",
   "balance_amount",
   "section_break_vglm",
@@ -183,8 +185,21 @@
    "read_only": 1
   },
   {
-   "fieldname": "paid_amount",
+   "default": "0",
+   "fieldname": "advance_amount_paid",
    "fieldtype": "Float",
+   "label": "Advance Amount Paid",
+   "precision": "2"
+  },
+  {
+   "fieldname": "advance_payment_type",
+   "fieldtype": "Link",
+   "label": "Advance Payment Mode",
+   "options": "Payment Type"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
    "label": "Paid Amount",
    "precision": "2",
    "read_only": 1

@@ -28,61 +28,60 @@ scriptApp.onload = () => {
     };
 
     firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
 
-    console.log("✅ Firebase initialized");
+    if (
+      "serviceWorker" in navigator &&
+      "Notification" in window &&
+      typeof firebase.messaging === "function" &&
+      firebase.messaging.isSupported()
+    ) {
+      try {
+        const messaging = firebase.messaging();
+        console.log("✅ Firebase Messaging initialized");
 
-    // Step 4️⃣ - Wait for Service Worker
-    navigator.serviceWorker.ready.then((registration) => {
-      console.log("🟢 SW Ready:", registration);
-
-      // Step 5️⃣ - Notification permission
-      Notification.requestPermission().then((permission) => {
-        console.log("🔹 Permission:", permission);
-
-        if (permission !== "granted") {
-          console.warn("🚫 Notification permission denied");
+        const vapidKey = frappe.boot.site_config?.firebase?.vapid_key;
+        if (!vapidKey) {
+          console.warn("⚠️ Firebase VAPID key not configured");
           return;
         }
 
-        // Step 6️⃣ - Get FCM token — this links messaging → SW automatically
-        messaging
-          .getToken({
-            vapidKey: frappe.boot.site_config.firebase.vapid_key,
-            serviceWorkerRegistration: registration, // ✔ Correct way in v10
-          })
-          .then((token) => {
-            if (!token) {
-              console.warn("⚠️ No token received");
-              return;
-            }
+        navigator.serviceWorker.ready.then((registration) => {
+          Notification.requestPermission().then((permission) => {
+            if (permission !== "granted") return;
 
-            console.log("🔥 FCM Token:", token);
-
-            // Step 7️⃣ - Save token to backend
-            frappe.call({
-              method: "company.company.api.save_fcm_token",
-              args: { token },
-              callback: function () {
-                console.log("✅ Token saved");
-              },
-            });
-          })
-          .catch((err) => {
-            console.error("❌ Token error:", err);
+            messaging
+              .getToken({
+                vapidKey: vapidKey,
+                serviceWorkerRegistration: registration,
+              })
+              .then((token) => {
+                if (!token) return;
+                frappe.call({
+                  method: "company.company.api.save_fcm_token",
+                  args: { token },
+                  callback: function () {
+                    console.log("✅ FCM Token saved");
+                  },
+                });
+              })
+              .catch((err) => {
+                console.warn("FCM Token notice:", err);
+              });
           });
-      });
-    });
+        });
 
-    messaging.onMessage((payload) => {
-      console.log("🔔 Foreground Message:", payload);
-
-      // Browser notification
-      new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: "https://erp.innoblitz.in/assets/Innoblitz%20Logo%20Full.png",
-      });
-    });
+        messaging.onMessage((payload) => {
+          if (payload && payload.notification) {
+            new Notification(payload.notification.title, {
+              body: payload.notification.body,
+              icon: "https://erp.innoblitz.in/assets/Innoblitz%20Logo%20Full.png",
+            });
+          }
+        });
+      } catch (e) {
+        console.warn("Firebase messaging initialization skipped:", e);
+      }
+    }
   };
 
   document.head.appendChild(scriptMsg);

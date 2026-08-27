@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "PURC.#####",
- "creation": "2025-12-29 11:28:00",
+ "creation": "2026-08-19 15:11:12.602921",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -10,15 +10,28 @@
   "vendor_name",
   "column_break_yvpi",
   "vendor_id",
-  "section_break_fiph",
+  "section_break_dmri",
   "business_person",
+  "section_break_fiph",
+  "is_advance",
+  "column_break_imyj",
+  "available_advance",
+  "advance_adjusted",
+  "opening_balance_details_section",
+  "available_opening_balance",
+  "column_break_vwed",
+  "use_opening_balance",
+  "opening_balance_deduction",
   "section_break_svph",
   "payment_date",
   "mode_of_payment",
   "column_break_wmma",
   "amount_to_pay",
+  "amount_paid_using_opening_balance",
+  "amount_paid_normally",
   "amount_paid",
   "amount_pending",
+  "excess_amount",
   "section_break_ybiw",
   "remarks",
   "section_break_ders",
@@ -36,24 +49,6 @@
    "reqd": 1
   },
   {
-   "fetch_from": "purchase.vendor_id",
-   "fieldname": "vendor_id",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Vendor ID",
-   "options": "Customer",
-   "read_only": 1
-  },
-  {
-   "fetch_from": "purchase.vendor_name",
-   "fieldname": "vendor_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Vendor Name",
-   "read_only": 1
-  },
-  {
    "fieldname": "payment_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -62,9 +57,12 @@
    "reqd": 1
   },
   {
+   "default": "0",
    "fieldname": "amount_paid",
    "fieldtype": "Currency",
-   "label": "Amount Paid",
+   "label": "Total Amount Paid",
+   "precision": "2",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -101,6 +99,14 @@
    "fieldtype": "Section Break"
   },
   {
+   "fetch_from": "purchase.vendor_name",
+   "fieldname": "vendor_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Vendor Name",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_svph",
    "fieldtype": "Section Break",
    "label": "Payment Information"
@@ -129,8 +135,20 @@
    "read_only": 1
   },
   {
+   "fetch_from": "purchase.vendor_id",
+   "fieldname": "vendor_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Vendor ID",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
    "fieldname": "section_break_fiph",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Advance Payment Details"
   },
   {
    "fieldname": "business_person",
@@ -139,12 +157,101 @@
    "label": "Business Person",
    "options": "Business Person",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_advance",
+   "fieldtype": "Check",
+   "label": "Is Advance"
+  },
+  {
+   "fieldname": "column_break_imyj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "available_advance",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Available Advance Balance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.available_advance>0||doc.advance_adjusted>0||doc.is_advance==1",
+   "fieldname": "advance_adjusted",
+   "fieldtype": "Currency",
+   "label": "Advance Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "opening_balance_details_section",
+   "fieldtype": "Section Break",
+   "label": "Opening Balance Details"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0||doc.use_opening_balance==1",
+   "fieldname": "available_opening_balance",
+   "fieldtype": "Currency",
+   "label": "Available Opening Balance",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vwed",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.available_opening_balance>0||doc.opening_balance_deduction>0||doc.use_opening_balance==1",
+   "fieldname": "use_opening_balance",
+   "fieldtype": "Check",
+   "label": "Use Opening Balance"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.use_opening_balance==1",
+   "fieldname": "opening_balance_deduction",
+   "fieldtype": "Currency",
+   "label": "Opening Balance Deduction",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.use_opening_balance==1",
+   "fieldname": "amount_paid_using_opening_balance",
+   "fieldtype": "Currency",
+   "label": "Amount Paid (Using Opening Balance)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "amount_paid_normally",
+   "fieldtype": "Currency",
+   "label": "Amount Paid",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "excess_amount",
+   "fieldtype": "Currency",
+   "label": "Excess Payment (Credited to Opening Balance)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_dmri",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 14:05:46.904087",
+ "modified": "2026-08-19 16:58:11.930724",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Purchase Collection",

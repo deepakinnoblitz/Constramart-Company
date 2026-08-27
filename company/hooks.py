@@ -9,8 +9,8 @@ app_include_js = [
     # "/assets/company/js/leads.js",
     "/assets/company/js/quotation.js",
     "/assets/company/js/estimation.js?v=4",
-    "/assets/company/js/invoice.js?v=4",
-    "/assets/company/js/purchase.js?v=4",
+    "/assets/company/js/invoice.js?v=24",
+    "/assets/company/js/purchase.js?v=9",
     "/assets/company/js/expenses.js",
     "/assets/company/js/custom.js",
     "/assets/company/js/attendance.js",
@@ -19,7 +19,7 @@ app_include_js = [
     "/assets/company/js/leave_allocation.js",
     "/assets/company/js/attendance_list.js",
     "/assets/company/js/wfh_attendance_list.js",
-    "/assets/company/js/firebase_init.js?v=1",
+    "/assets/company/js/firebase_init.js?v=2",
     "/assets/company/js/pwa_init.js?v=1",
     # "/assets/company/js/socket.io.min.js",
     # "/assets/company/js/socket_init.js",
@@ -48,7 +48,7 @@ app_include_js = [
     # "/assets/company/js/sales_pipeline.js",
 ]
 
-app_include_css = "/assets/company/css/custom.css?v=12"
+app_include_css = "/assets/company/css/custom.css?v=20"
 
 
 doc_events = {
@@ -63,6 +63,12 @@ doc_events = {
         "after_insert": "company.company.api.update_invoice_received_balance",
         "on_update": "company.company.api.update_invoice_received_balance",
         "on_trash": "company.company.api.update_invoice_received_balance"
+    },
+    "Purchase Collection": {
+        "validate": "company.company.api.validate_purchase_collection",
+        "after_insert": "company.company.api.update_purchase_collection_amounts",
+        "on_update": "company.company.api.update_purchase_collection_amounts",
+        "on_trash": "company.company.api.update_purchase_collection_amounts"
     },
     "Expenses": {
         "before_insert": "company.company.api.before_insert_expense"

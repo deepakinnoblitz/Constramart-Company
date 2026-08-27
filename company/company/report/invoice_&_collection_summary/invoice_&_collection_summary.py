@@ -73,6 +73,7 @@ def get_columns():
         {"label": "Customer", "fieldname": "customer_id", "fieldtype": "Link", "options": "Customer", "width": 150},
         {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 150},
         {"label": "Status", "fieldname": "customer_status", "fieldtype": "Data", "width": 80},
+        {"label": "Is Advance", "fieldname": "is_advance_label", "fieldtype": "Data", "width": 100},
 
         {"label": "Grand Total", "fieldname": "grand_total", "fieldtype": "Currency", "width": 120},
         {"label": "Amount Collected", "fieldname": "amount_collected", "fieldtype": "Currency", "width": 130},
@@ -133,6 +134,7 @@ def get_data(filters, is_export=False):
             inv.grand_total,
             ic.collection_date,
             ic.amount_collected,
+            ic.is_advance,
             ic.mode_of_payment AS payment_mode,
             inv.location,
             bp.business_person_name AS business_person,
@@ -170,8 +172,11 @@ def get_data(filters, is_export=False):
         first_id = first_invoice_map.get(d.customer_id)
         status_label = "NEW" if (d.invoice == first_id) else "OLD"
         
+        is_adv = flt(d.get("is_advance")) == 1
+
         if is_export:
             d.customer_status = status_label
+            d.is_advance_label = "ADVANCE" if is_adv else "REGULAR"
         else:
             color_bg = "#10b981" if status_label == "NEW" else "#3b82f6"
             # High-end styling: Bold uppercase with modern rounded pill design
@@ -188,6 +193,11 @@ def get_data(filters, is_export=False):
                     letter-spacing: 0.5px;
                 ">{status_label}</span>
             '''.strip()
+
+            if is_adv:
+                d.is_advance_label = '''<span style="background-color: #8b5cf6; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; line-height: 1; letter-spacing: 0.5px;">ADVANCE</span>'''.strip()
+            else:
+                d.is_advance_label = '''<span style="background-color: #6b7280; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; line-height: 1; letter-spacing: 0.5px;">REGULAR</span>'''.strip()
         
         inv_name = d.invoice
         if inv_name not in invoice_running_total:
@@ -197,8 +207,8 @@ def get_data(filters, is_export=False):
 
         # Total collected up to this point
         d.total_collected = invoice_running_total[inv_name]
-        # Pending after this specific collection
-        d.amount_pending = flt(d.grand_total) - d.total_collected
+        # Pending after this specific collection (capped at max 0.0 to prevent negative pending)
+        d.amount_pending = max(0.0, flt(d.grand_total) - d.total_collected)
         processed_data.append(d)
 
     # Handle 'show_only_last_collection' in Python
@@ -235,7 +245,9 @@ def get_summary(data):
             # Add invoice-level totals only once (from the latest available record for this invoice)
             total_inv += flt(d.get("grand_total"))
             total_collected += flt(d.get("total_collected"))
-            total_pending += flt(d.get("amount_pending"))
+            total_pending += max(0.0, flt(d.get("amount_pending")))
+
+    total_pending = max(0.0, total_pending)
 
     return [
         {
