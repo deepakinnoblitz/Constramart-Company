@@ -82,6 +82,28 @@ function add_global_action_buttons(listview) {
 
     if (!can_edit && !can_delete) return;
 
+    // Pre-calculate latest collection per customer/vendor for Collection doctypes
+    let latest_collection_map = {};
+    if (listview.doctype === "Invoice Collection") {
+        (listview.data || []).forEach(d => {
+            const party = d.customer_id || d.customer;
+            if (party) {
+                if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
+                    latest_collection_map[party] = d.name;
+                }
+            }
+        });
+    } else if (listview.doctype === "Purchase Collection") {
+        (listview.data || []).forEach(d => {
+            const party = d.vendor_id || d.vendor;
+            if (party) {
+                if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
+                    latest_collection_map[party] = d.name;
+                }
+            }
+        });
+    }
+
     // Loop through each row container
     listview.$result.find(".list-row-container").each(function () {
 
@@ -106,15 +128,32 @@ function add_global_action_buttons(listview) {
         let right_section = row.find(".level-right");
         if (!right_section.length) return;
 
+        // Determine if this row is editable/deletable
+        let allow_edit = can_edit;
+        let allow_delete = can_delete;
+
+        if (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection") {
+            const doc_item = (listview.data || []).find(d => d.name === docname);
+            if (doc_item) {
+                const party = doc_item.customer_id || doc_item.customer || doc_item.vendor_id || doc_item.vendor;
+                if (party && latest_collection_map[party] && latest_collection_map[party] !== docname) {
+                    allow_edit = false;
+                    allow_delete = false;
+                }
+            }
+        }
+
+        if (!allow_edit && !allow_delete) return;
+
         // Build icons
         let action_html = `
             <span class="custom-actions"
                 style="margin-left:10px; display:flex; gap:20px; align-items:center; margin-right:20px;">
-                ${can_edit ? `
+                ${allow_edit ? `
                     <a class="edit-btn" data-name="${docname}" title="Edit" style="cursor:pointer;">
                         <svg class="icon icon-sm edit-icon" style="width:18px; height:25px; stroke: #2574b3;"><use href="#icon-edit"></use></svg>
                     </a>` : ""}
-                ${can_delete ? `
+                ${allow_delete ? `
                     <a class="delete-btn" data-name="${docname}" title="Delete" style="cursor:pointer;">
                         <svg class="icon icon-sm delete-icon" style="width:18px; height:25px; stroke: #ff0000;"><use href="#icon-delete"></use></svg>
                     </a>` : ""}
