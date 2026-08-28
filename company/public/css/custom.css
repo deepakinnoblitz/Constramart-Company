@@ -33,13 +33,15 @@
   margin-top: 0 !important;
 }
 
-/* Permanently hide Save button on locked Customer forms (excluding modal dialogs) */
-body.customer-locked-form .page-head .page-actions .btn-primary,
-body.customer-locked-form .page-head .page-actions .primary-action,
-body.customer-locked-form .page-head [data-label="Save"],
-body.customer-locked-form .page-head button.primary-action,
-body.customer-locked-form .page-head .standard-actions .btn-primary,
-body.customer-locked-form .page-head .standard-actions .primary-action {
+/* Permanently hide Save button on locked Customer forms (excluding modal dialogs and non-Customer pages) */
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head .page-actions .btn-primary,
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head .page-actions .primary-action,
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head [data-label="Save"],
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head button.primary-action,
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head .standard-actions .btn-primary,
+.page-container[data-page-route^="Form/Customer"].customer-locked-form .page-head .standard-actions .primary-action,
+[data-doctype="Customer"].customer-locked-form .page-head .btn-primary,
+[data-doctype="Customer"].customer-locked-form .page-head .primary-action {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

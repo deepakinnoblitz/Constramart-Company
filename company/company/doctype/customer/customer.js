@@ -158,7 +158,6 @@ frappe.ui.form.on("Customer", {
                     frm.disable_save();
                     $(frm.wrapper).addClass("customer-locked-form");
                     $(frm.page.wrapper).addClass("customer-locked-form");
-                    $(".page-head, .page-actions, body").addClass("customer-locked-form");
 
                     // Disable all fields
                     frm.meta.fields.forEach(df => {
