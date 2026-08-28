@@ -129,18 +129,18 @@ class PurchaseCollection(Document):
 		self.ensure_latest_collection()
 
 	def ensure_latest_collection(self):
-		"""Check if there are any newer collections for the same purchase order"""
-		if self.is_new() or not self.purchase:
+		"""Check if there are any newer collections for the same vendor"""
+		if self.is_new() or not self.vendor_id:
 			return
 
 		latest_collection = frappe.db.get_value("Purchase Collection", 
-			filters={"purchase": self.purchase},
+			filters={"vendor_id": self.vendor_id},
 			fieldname="name",
 			order_by="creation desc"
 		)
 
 		if latest_collection and latest_collection != self.name:
-			frappe.throw(_("Only the last collection ({0}) for Purchase Order {1} can be modified or deleted.").format(latest_collection, self.purchase))
+			frappe.throw(_("Only the overall last collection ({0}) for Vendor {1} can be modified or deleted.").format(latest_collection, self.vendor_id))
 
 	def after_insert(self):
 		"""Update Purchase amounts after creating a new collection"""

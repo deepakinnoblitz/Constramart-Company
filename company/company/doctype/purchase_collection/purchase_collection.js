@@ -34,14 +34,14 @@ frappe.ui.form.on("Purchase Collection", {
     refresh(frm) {
         toggle_advance_field(frm);
 
-        if (!frm.is_new() && !frm.doc.is_advance) {
-            // Check if this is the last collection for the purchase order
+        if (!frm.is_new() && !frm.doc.is_advance && frm.doc.vendor_id) {
+            // Check if this is the overall last collection for the vendor
             frappe.call({
                 method: "frappe.client.get_list",
                 args: {
                     doctype: "Purchase Collection",
                     filters: {
-                        purchase: frm.doc.purchase,
+                        vendor_id: frm.doc.vendor_id,
                         creation: [">", frm.doc.creation],
                         name: ["!=", frm.doc.name]
                     },
@@ -53,7 +53,7 @@ frappe.ui.form.on("Purchase Collection", {
                             method: "frappe.client.get_list",
                             args: {
                                 doctype: "Purchase Collection",
-                                filters: { purchase: frm.doc.purchase },
+                                filters: { vendor_id: frm.doc.vendor_id },
                                 order_by: "creation desc",
                                 limit: 1
                             },
@@ -61,7 +61,7 @@ frappe.ui.form.on("Purchase Collection", {
                                 if (resp.message && resp.message.length > 0) {
                                     const latest_purc = resp.message[0].name;
                                     frm.disable_save();
-                                    frm.set_intro(__("Only the last collection ({0}) for a purchase order can be edited or deleted.", [latest_purc]), "red");
+                                    frm.set_intro(__("Only the overall last collection ({0}) for Vendor {1} can be edited or deleted.", [latest_purc, frm.doc.vendor_id]), "red");
                                     frm.set_read_only();
                                 }
                             }
