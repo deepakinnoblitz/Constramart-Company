@@ -252,7 +252,6 @@ frappe.ui.form.on("Invoice Collection", {
                                 frm.set_df_property("use_opening_balance", "read_only", 1);
                                 frm.set_df_property("opening_balance_deduction", "read_only", 1);
                                 frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
-                                frm.set_intro(__("Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.", [latest_inv[0].name]), "orange");
                             } else {
                                 // Latest invoice for customer -> allow editing Use Opening Balance
                                 frm.set_df_property("use_opening_balance", "read_only", 0);
