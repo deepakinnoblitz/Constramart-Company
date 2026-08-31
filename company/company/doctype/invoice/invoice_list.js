@@ -94,28 +94,47 @@ frappe.listview_settings['Invoice'] = {
             current_checked.forEach(n => combined_set.add(n));
             let selected_names = Array.from(combined_set);
 
-            let from_date = $('#sales_from_date_input').val() ? frappe.datetime.user_to_str($('#sales_from_date_input').val()) : null;
-            let to_date = $('#sales_to_date_input').val() ? frappe.datetime.user_to_str($('#sales_to_date_input').val()) : null;
-            let customer_id = listview.page.fields_dict['customer_id'] ? listview.page.fields_dict['customer_id'].get_value() : null;
+            let filters = {};
 
-            // If no checkboxes explicitly checked, but search or filters are active in List View, use listview.data names
-            if (selected_names.length === 0 && listview.data && listview.data.length > 0) {
-                let has_filter = false;
-                if (listview.filter_area && listview.filter_area.get() && listview.filter_area.get().length > 0) has_filter = true;
-                if (listview.get_filters_for_args && Object.keys(listview.get_filters_for_args() || {}).length > 0) has_filter = true;
-                if (from_date || to_date || customer_id) has_filter = true;
-                if ($('.page-form input, .page-form select').filter(function () { return $(this).val(); }).length > 0) has_filter = true;
-
-                if (has_filter) {
-                    selected_names = listview.data.map(item => item.name);
-                }
+            // 1. Extract custom date inputs
+            if ($('#sales_from_date_input').val()) {
+                filters.from_date = frappe.datetime.user_to_str($('#sales_from_date_input').val());
+            }
+            if ($('#sales_to_date_input').val()) {
+                filters.to_date = frappe.datetime.user_to_str($('#sales_to_date_input').val());
             }
 
-            let filters = {
-                from_date: from_date,
-                to_date: to_date,
-                customer_id: customer_id
-            };
+            // 2. Extract page fields_dict values
+            if (listview.page && listview.page.fields_dict) {
+                Object.keys(listview.page.fields_dict).forEach(fname => {
+                    let field = listview.page.fields_dict[fname];
+                    if (field && field.get_value && field.get_value()) {
+                        filters[fname] = field.get_value();
+                    }
+                });
+            }
+
+            // 3. Extract Filter Area filters
+            if (listview.filter_area && listview.filter_area.get) {
+                let flist = listview.filter_area.get();
+                (flist || []).forEach(f => {
+                    if (Array.isArray(f) && f.length >= 4) {
+                        let fname = f[1];
+                        let fval = f[3];
+                        if (fname && fval) {
+                            filters[fname] = fval;
+                        }
+                    }
+                });
+            }
+
+            // 4. Extract URL query parameters fallback
+            let url_params = frappe.utils.get_query_params();
+            Object.keys(url_params).forEach(k => {
+                if (k && url_params[k] && !filters[k]) {
+                    filters[k] = url_params[k];
+                }
+            });
 
             frappe.call({
                 method: 'company.company.api.get_sales_export_count',
