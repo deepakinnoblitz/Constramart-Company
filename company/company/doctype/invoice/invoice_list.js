@@ -98,6 +98,19 @@ frappe.listview_settings['Invoice'] = {
             let to_date = $('#sales_to_date_input').val() ? frappe.datetime.user_to_str($('#sales_to_date_input').val()) : null;
             let customer_id = listview.page.fields_dict['customer_id'] ? listview.page.fields_dict['customer_id'].get_value() : null;
 
+            // If no checkboxes explicitly checked, but search or filters are active in List View, use listview.data names
+            if (selected_names.length === 0 && listview.data && listview.data.length > 0) {
+                let has_filter = false;
+                if (listview.filter_area && listview.filter_area.get() && listview.filter_area.get().length > 0) has_filter = true;
+                if (listview.get_filters_for_args && Object.keys(listview.get_filters_for_args() || {}).length > 0) has_filter = true;
+                if (from_date || to_date || customer_id) has_filter = true;
+                if ($('.page-form input, .page-form select').filter(function () { return $(this).val(); }).length > 0) has_filter = true;
+
+                if (has_filter) {
+                    selected_names = listview.data.map(item => item.name);
+                }
+            }
+
             let filters = {
                 from_date: from_date,
                 to_date: to_date,
