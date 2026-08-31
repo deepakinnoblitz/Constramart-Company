@@ -3561,28 +3561,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
     if isinstance(names, str):
         names = frappe.parse_json(names) or []
 
-    conditions = []
-    values = {}
-
-    if names:
-        conditions.append("pur.name IN %(names)s")
-        values["names"] = tuple(names)
-    else:
-        if filters.get("from_date") and filters.get("to_date"):
-            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
-            values["from_date"] = filters.get("from_date")
-            values["to_date"] = filters.get("to_date")
-        elif filters.get("from_date"):
-            conditions.append("pur.bill_date >= %(from_date)s")
-            values["from_date"] = filters.get("from_date")
-        elif filters.get("to_date"):
-            conditions.append("pur.bill_date <= %(to_date)s")
-            values["to_date"] = filters.get("to_date")
-
-        if filters.get("vendor_id"):
-            conditions.append("pur.vendor_id = %(vendor_id)s")
-            values["vendor_id"] = filters.get("vendor_id")
-
+    conditions, values = _build_purchase_export_conditions(filters, names)
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     query = f"""
