@@ -82,28 +82,46 @@ function add_global_action_buttons(listview) {
 
     if (!can_edit && !can_delete) return;
 
-    // Pre-calculate latest collection per customer/vendor for Collection doctypes
-    let latest_collection_map = {}; // party -> { name, creation }
-    if (listview.doctype === "Invoice Collection") {
+    // For Collection doctypes, fetch the real DB latest collection for each party
+    if (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection") {
+        const is_invoice = listview.doctype === "Invoice Collection";
+        const party_field = is_invoice ? "customer_id" : "vendor_id";
+        
+        let party_set = new Set();
         (listview.data || []).forEach(d => {
-            const party = d.customer_id || d.customer_name || d.customer;
-            if (party) {
-                if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
-                    latest_collection_map[party] = { name: d.name, creation: d.creation };
-                }
-            }
+            const party = d[party_field] || d[is_invoice ? "customer_name" : "vendor_name"] || d[is_invoice ? "customer" : "vendor"];
+            if (party) party_set.add(party);
         });
-    } else if (listview.doctype === "Purchase Collection") {
-        (listview.data || []).forEach(d => {
-            const party = d.vendor_id || d.vendor_name || d.vendor;
-            if (party) {
-                if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
-                    latest_collection_map[party] = { name: d.name, creation: d.creation };
+
+        const parties = Array.from(party_set);
+        if (!parties.length) {
+            render_all_rows(listview, can_edit, can_delete, null);
+            return;
+        }
+
+        frappe.db.get_list(listview.doctype, {
+            filters: [[party_field, "in", parties]],
+            fields: ["name", party_field, "creation"],
+            order_by: "creation desc",
+            limit_page_length: 500
+        }).then(records => {
+            let latest_db_map = {}; // party -> latest_docname
+            (records || []).forEach(r => {
+                const party = r[party_field];
+                if (party && !latest_db_map[party]) {
+                    latest_db_map[party] = r.name;
                 }
-            }
+            });
+            render_all_rows(listview, can_edit, can_delete, latest_db_map);
         });
+
+        return;
     }
 
+    render_all_rows(listview, can_edit, can_delete, null);
+}
+
+function render_all_rows(listview, can_edit, can_delete, latest_db_map) {
     // Loop through each row container
     listview.$result.find(".list-row-container").each(function () {
 
@@ -132,11 +150,13 @@ function add_global_action_buttons(listview) {
         let allow_edit = can_edit;
         let allow_delete = can_delete;
 
-        if (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection") {
+        if (latest_db_map && (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection")) {
+            const is_invoice = listview.doctype === "Invoice Collection";
+            const party_field = is_invoice ? "customer_id" : "vendor_id";
             const doc_item = (listview.data || []).find(d => d.name === docname);
             if (doc_item) {
-                const party = doc_item.customer_id || doc_item.customer_name || doc_item.customer || doc_item.vendor_id || doc_item.vendor_name || doc_item.vendor;
-                if (party && latest_collection_map[party] && latest_collection_map[party].name !== docname) {
+                const party = doc_item[party_field] || doc_item[is_invoice ? "customer_name" : "vendor_name"] || doc_item[is_invoice ? "customer" : "vendor"];
+                if (party && latest_db_map[party] && latest_db_map[party] !== docname) {
                     allow_edit = false;
                     allow_delete = false;
                 }
