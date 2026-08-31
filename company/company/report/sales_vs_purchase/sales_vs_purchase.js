@@ -90,6 +90,64 @@ frappe.query_reports["Sales vs purchase"] = {
     ],
 
     onload(report) {
+        report.page.add_inner_button(__("Export Sales vs Purchase Details"), function () {
+            let filters = report.get_filter_values(true) || {};
+
+            frappe.call({
+                method: 'company.company.api.get_sales_vs_purchase_export_count',
+                args: {
+                    filters: JSON.stringify(filters)
+                },
+                callback: function (r) {
+                    let count = (r.message || {}).count || 0;
+
+                    if (count === 0) {
+                        frappe.msgprint({
+                            title: __('No Data Found'),
+                            message: __('There are no records matching the selected filters to export.'),
+                            indicator: 'orange'
+                        });
+                        return;
+                    }
+
+                    frappe.confirm(
+                        __('Are you sure you want to download <b>{0} Record(s)</b> to Excel?', [count]),
+                        function () {
+                            frappe.dom.freeze(__('Generating Excel Report, please wait...'));
+
+                            fetch('/api/method/company.company.api.export_sales_vs_purchase_excel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                                },
+                                body: $.param({
+                                    filters: JSON.stringify(filters)
+                                })
+                            })
+                                .then(response => response.blob())
+                                .then(blob => {
+                                    frappe.dom.unfreeze();
+                                    let url = window.URL.createObjectURL(blob);
+                                    let a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Sales_vs_Purchase_Report.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    window.URL.revokeObjectURL(url);
+                                    frappe.show_alert({ message: __('Excel Report downloaded successfully!'), indicator: 'green' });
+                                })
+                                .catch(err => {
+                                    frappe.dom.unfreeze();
+                                    frappe.msgprint(__('Failed to generate Excel report. Please try again.'));
+                                });
+                        }
+                    );
+                }
+            });
+        });
+
         report._prev_btn = report.page.add_inner_button("⬅ Prev", () => {
             const page = report.get_filter_value("page");
             if (page > 1) {
@@ -193,7 +251,7 @@ frappe.query_reports["Sales vs purchase"] = {
                         }
 
                         report._location_options = options;
-                        
+
                         // Force refresh the field to pick up new _location_options if user is already searching
                         if (report.page.fields_dict.location.refresh) {
                             report.page.fields_dict.location.refresh();

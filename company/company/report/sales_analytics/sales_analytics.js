@@ -64,6 +64,65 @@ frappe.query_reports["Sales Analytics"] = {
         console.log("🛠️ Sales Analytics onload fired");
         report.set_filter_value("page_length", 10);
 
+        report.page.add_inner_button(__("Export Invoice Details"), function () {
+            let filters = report.get_filter_values(true) || {};
+
+            frappe.call({
+                method: 'company.company.api.get_sales_export_count',
+                args: {
+                    filters: JSON.stringify(filters)
+                },
+                callback: function (r) {
+                    let counts = r.message || { invoice_count: 0, item_count: 0 };
+                    let inv_count = counts.invoice_count || 0;
+
+                    if (inv_count === 0) {
+                        frappe.msgprint({
+                            title: __('No Invoices Found'),
+                            message: __('There are no invoices matching the selected filters to export.'),
+                            indicator: 'orange'
+                        });
+                        return;
+                    }
+
+                    frappe.confirm(
+                        __('Are you sure you want to download <b>{0} Invoice(s)</b> to Excel?', [inv_count]),
+                        function () {
+                            frappe.dom.freeze(__('Generating Excel Report, please wait...'));
+
+                            fetch('/api/method/company.company.api.export_sales_itemized_excel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                                },
+                                body: $.param({
+                                    filters: JSON.stringify(filters)
+                                })
+                            })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                frappe.dom.unfreeze();
+                                let url = window.URL.createObjectURL(blob);
+                                let a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Sales_Item_Details_Report.xlsx';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                                frappe.show_alert({ message: __('Excel Report downloaded successfully!'), indicator: 'green' });
+                            })
+                            .catch(err => {
+                                frappe.dom.unfreeze();
+                                frappe.msgprint(__('Failed to generate Excel report. Please try again.'));
+                            });
+                        }
+                    );
+                }
+            });
+        });
+
         report._prev_btn = report.page.add_inner_button("⬅ Prev", () => {
             const page = report.get_filter_value("page");
             if (page > 1) {
