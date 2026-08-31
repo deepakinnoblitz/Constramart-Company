@@ -118,19 +118,19 @@ class InvoiceCollection(Document):
 		self.ensure_latest_collection()
 
 	def ensure_latest_collection(self):
-		"""Check if there are any newer collections for the same invoice"""
-		if self.is_new() or not self.invoice:
+		"""Check if there are any newer collections for the same customer"""
+		if self.is_new() or not self.customer_id:
 			return
 
-		# Find the latest collection's name
+		# Find the latest collection's name for this customer
 		latest_collection = frappe.db.get_value("Invoice Collection", 
-			filters={"invoice": self.invoice},
+			filters={"customer_id": self.customer_id},
 			fieldname="name",
 			order_by="creation desc"
 		)
 
 		if latest_collection and latest_collection != self.name:
-			frappe.throw(_("Only the last collection ({0}) for Invoice {1} can be modified or deleted.").format(latest_collection, self.invoice))
+			frappe.throw(_("Only the overall last collection ({0}) for Customer {1} can be modified or deleted.").format(latest_collection, self.customer_id))
 
 	def after_insert(self):
 		"""Update Invoice amounts after creating a new collection"""

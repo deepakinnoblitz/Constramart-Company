@@ -82,6 +82,46 @@ function add_global_action_buttons(listview) {
 
     if (!can_edit && !can_delete) return;
 
+    // For Collection doctypes, fetch the real DB latest collection for each party
+    if (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection") {
+        const is_invoice = listview.doctype === "Invoice Collection";
+        const party_field = is_invoice ? "customer_id" : "vendor_id";
+        
+        let party_set = new Set();
+        (listview.data || []).forEach(d => {
+            const party = d[party_field] || d[is_invoice ? "customer_name" : "vendor_name"] || d[is_invoice ? "customer" : "vendor"];
+            if (party) party_set.add(party);
+        });
+
+        const parties = Array.from(party_set);
+        if (!parties.length) {
+            render_all_rows(listview, can_edit, can_delete, null);
+            return;
+        }
+
+        frappe.db.get_list(listview.doctype, {
+            filters: [[party_field, "in", parties]],
+            fields: ["name", party_field, "creation"],
+            order_by: "creation desc",
+            limit_page_length: 500
+        }).then(records => {
+            let latest_db_map = {}; // party -> latest_docname
+            (records || []).forEach(r => {
+                const party = r[party_field];
+                if (party && !latest_db_map[party]) {
+                    latest_db_map[party] = r.name;
+                }
+            });
+            render_all_rows(listview, can_edit, can_delete, latest_db_map);
+        });
+
+        return;
+    }
+
+    render_all_rows(listview, can_edit, can_delete, null);
+}
+
+function render_all_rows(listview, can_edit, can_delete, latest_db_map) {
     // Loop through each row container
     listview.$result.find(".list-row-container").each(function () {
 
@@ -106,15 +146,34 @@ function add_global_action_buttons(listview) {
         let right_section = row.find(".level-right");
         if (!right_section.length) return;
 
+        // Determine if this row is editable/deletable
+        let allow_edit = can_edit;
+        let allow_delete = can_delete;
+
+        if (latest_db_map && (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection")) {
+            const is_invoice = listview.doctype === "Invoice Collection";
+            const party_field = is_invoice ? "customer_id" : "vendor_id";
+            const doc_item = (listview.data || []).find(d => d.name === docname);
+            if (doc_item) {
+                const party = doc_item[party_field] || doc_item[is_invoice ? "customer_name" : "vendor_name"] || doc_item[is_invoice ? "customer" : "vendor"];
+                if (party && latest_db_map[party] && latest_db_map[party] !== docname) {
+                    allow_edit = false;
+                    allow_delete = false;
+                }
+            }
+        }
+
+        if (!allow_edit && !allow_delete) return;
+
         // Build icons
         let action_html = `
             <span class="custom-actions"
                 style="margin-left:10px; display:flex; gap:20px; align-items:center; margin-right:20px;">
-                ${can_edit ? `
+                ${allow_edit ? `
                     <a class="edit-btn" data-name="${docname}" title="Edit" style="cursor:pointer;">
                         <svg class="icon icon-sm edit-icon" style="width:18px; height:25px; stroke: #2574b3;"><use href="#icon-edit"></use></svg>
                     </a>` : ""}
-                ${can_delete ? `
+                ${allow_delete ? `
                     <a class="delete-btn" data-name="${docname}" title="Delete" style="cursor:pointer;">
                         <svg class="icon icon-sm delete-icon" style="width:18px; height:25px; stroke: #ff0000;"><use href="#icon-delete"></use></svg>
                     </a>` : ""}

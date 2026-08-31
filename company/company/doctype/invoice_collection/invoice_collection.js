@@ -34,14 +34,14 @@ frappe.ui.form.on("Invoice Collection", {
     refresh(frm) {
         toggle_advance_field(frm);
 
-        if (!frm.is_new() && !frm.doc.is_advance) {
-            // Check if this is the last collection for the invoice
+        if (!frm.is_new() && !frm.doc.is_advance && frm.doc.customer_id) {
+            // Check if this is the overall last collection for the customer
             frappe.call({
                 method: "frappe.client.get_list",
                 args: {
                     doctype: "Invoice Collection",
                     filters: {
-                        invoice: frm.doc.invoice,
+                        customer_id: frm.doc.customer_id,
                         creation: [">", frm.doc.creation],
                         name: ["!=", frm.doc.name]
                     },
@@ -49,12 +49,12 @@ frappe.ui.form.on("Invoice Collection", {
                 },
                 callback: function (r) {
                     if (r.message && r.message.length > 0) {
-                        // There are newer collections. Find the "last" one to show in message.
+                        // There are newer collections for this customer. Find the "last" one to show in message.
                         frappe.call({
                             method: "frappe.client.get_list",
                             args: {
                                 doctype: "Invoice Collection",
-                                filters: { invoice: frm.doc.invoice },
+                                filters: { customer_id: frm.doc.customer_id },
                                 order_by: "creation desc",
                                 limit: 1
                             },
@@ -62,7 +62,7 @@ frappe.ui.form.on("Invoice Collection", {
                                 if (resp.message && resp.message.length > 0) {
                                     const latest_invc = resp.message[0].name;
                                     frm.disable_save();
-                                    frm.set_intro(__("Only the last collection ({0}) for an invoice can be edited or deleted.", [latest_invc]), "red");
+                                    frm.set_intro(__("Only the overall last collection ({0}) for Customer {1} can be edited or deleted.", [latest_invc, frm.doc.customer_id]), "red");
                                     frm.set_read_only();
                                 }
                             }
@@ -252,7 +252,6 @@ frappe.ui.form.on("Invoice Collection", {
                                 frm.set_df_property("use_opening_balance", "read_only", 1);
                                 frm.set_df_property("opening_balance_deduction", "read_only", 1);
                                 frm.set_df_property("use_opening_balance", "description", __("<span style='color:#e65100;'>Disabled: Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.</span>", [latest_inv[0].name]));
-                                frm.set_intro(__("Opening Balance can only be used on the latest Sales Invoice ({0}) for this Customer.", [latest_inv[0].name]), "orange");
                             } else {
                                 // Latest invoice for customer -> allow editing Use Opening Balance
                                 frm.set_df_property("use_opening_balance", "read_only", 0);
