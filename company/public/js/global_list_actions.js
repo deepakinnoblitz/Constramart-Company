@@ -83,13 +83,13 @@ function add_global_action_buttons(listview) {
     if (!can_edit && !can_delete) return;
 
     // Pre-calculate latest collection per customer/vendor for Collection doctypes
-    let latest_collection_map = {};
+    let latest_collection_map = {}; // party -> { name, creation }
     if (listview.doctype === "Invoice Collection") {
         (listview.data || []).forEach(d => {
             const party = d.customer_id || d.customer;
             if (party) {
                 if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
-                    latest_collection_map[party] = d.name;
+                    latest_collection_map[party] = { name: d.name, creation: d.creation };
                 }
             }
         });
@@ -98,7 +98,7 @@ function add_global_action_buttons(listview) {
             const party = d.vendor_id || d.vendor;
             if (party) {
                 if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
-                    latest_collection_map[party] = d.name;
+                    latest_collection_map[party] = { name: d.name, creation: d.creation };
                 }
             }
         });
@@ -136,7 +136,7 @@ function add_global_action_buttons(listview) {
             const doc_item = (listview.data || []).find(d => d.name === docname);
             if (doc_item) {
                 const party = doc_item.customer_id || doc_item.customer || doc_item.vendor_id || doc_item.vendor;
-                if (party && latest_collection_map[party] && latest_collection_map[party] !== docname) {
+                if (party && latest_collection_map[party] && latest_collection_map[party].name !== docname) {
                     allow_edit = false;
                     allow_delete = false;
                 }
