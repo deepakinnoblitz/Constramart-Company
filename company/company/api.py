@@ -3137,7 +3137,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             inv.billing_name,
             inv.invoice_date,
             inv.po_no as dc_no,
-            inv.payment_terms,
+            COALESCE(pt.payment_terms, inv.payment_terms, '') as payment_terms,
             inv.po_date as dc_date,
             inv.due_date,
             inv.company_name,
@@ -3159,6 +3159,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             COALESCE(inv.balance_amount, 0) as balance_amount
         FROM `tabInvoice` inv
         LEFT JOIN `tabBusiness Person` bp ON bp.name = inv.business_person_name
+        LEFT JOIN `tabPayment Terms` pt ON pt.name = inv.payment_terms
         LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
         LEFT JOIN `tabItem` item ON item.name = item_tb.service
         {where_clause}
@@ -3413,7 +3414,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             pur.vendor_name,
             pur.bill_no,
             pur.bill_date,
-            pur.payment_terms,
+            COALESCE(pt.payment_terms, pur.payment_terms, '') as payment_terms,
             pur.due_date,
             pur.purchase_status,
             COALESCE(item.item_name, item_tb.service, '') as item_name,
@@ -3434,6 +3435,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             COALESCE(pur.balance_amount, 0) as balance_amount
         FROM `tabPurchase` pur
         LEFT JOIN `tabBusiness Person` bp ON bp.name = pur.business_person_name
+        LEFT JOIN `tabPayment Terms` pt ON pt.name = pur.payment_terms
         LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
         LEFT JOIN `tabItem` item ON item.name = item_tb.service
         {where_clause}
