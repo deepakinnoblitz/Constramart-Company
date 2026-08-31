@@ -86,7 +86,7 @@ function add_global_action_buttons(listview) {
     let latest_collection_map = {}; // party -> { name, creation }
     if (listview.doctype === "Invoice Collection") {
         (listview.data || []).forEach(d => {
-            const party = d.customer_id || d.customer;
+            const party = d.customer_id || d.customer_name || d.customer;
             if (party) {
                 if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
                     latest_collection_map[party] = { name: d.name, creation: d.creation };
@@ -95,7 +95,7 @@ function add_global_action_buttons(listview) {
         });
     } else if (listview.doctype === "Purchase Collection") {
         (listview.data || []).forEach(d => {
-            const party = d.vendor_id || d.vendor;
+            const party = d.vendor_id || d.vendor_name || d.vendor;
             if (party) {
                 if (!latest_collection_map[party] || d.creation > latest_collection_map[party].creation) {
                     latest_collection_map[party] = { name: d.name, creation: d.creation };
@@ -135,7 +135,7 @@ function add_global_action_buttons(listview) {
         if (listview.doctype === "Invoice Collection" || listview.doctype === "Purchase Collection") {
             const doc_item = (listview.data || []).find(d => d.name === docname);
             if (doc_item) {
-                const party = doc_item.customer_id || doc_item.customer || doc_item.vendor_id || doc_item.vendor;
+                const party = doc_item.customer_id || doc_item.customer_name || doc_item.customer || doc_item.vendor_id || doc_item.vendor_name || doc_item.vendor;
                 if (party && latest_collection_map[party] && latest_collection_map[party].name !== docname) {
                     allow_edit = false;
                     allow_delete = false;
