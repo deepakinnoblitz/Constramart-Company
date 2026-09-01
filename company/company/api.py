@@ -3917,6 +3917,7 @@ def export_sales_vs_purchase_excel(filters=None):
     )
 
     ws.append(headers)
+    ws.row_dimensions[1].height = 24.1  # Fixed 0.85 CM header height
 
     for col_num in range(1, len(headers) + 1):
         cell = ws.cell(row=1, column=col_num)
@@ -4072,7 +4073,7 @@ def export_sales_vs_purchase_excel(filters=None):
         # Dynamically adjust data row heights ONLY (excluding header row 1) so total merged cell height reaches minimum 135pt
         total_data_rows = current_row - 2
         approx_total_height = 20.0 + (total_data_rows * 20.0)
-        min_required_height = 125.0
+        min_required_height = 105.0
 
         if total_data_rows > 0 and approx_total_height < min_required_height:
             needed_extra_data_height = min_required_height - 20.0
