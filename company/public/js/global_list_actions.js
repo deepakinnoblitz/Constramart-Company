@@ -197,35 +197,71 @@ function render_all_rows(listview, can_edit, can_delete, latest_db_map) {
         e.stopPropagation();
 
         let name = $(this).data("name");
-        let $row = $(this).closest(".list-row-container"); // 🚀 Capture row for instant removal
+        let $row = $(this).closest(".list-row-container"); // Capture row for instant removal
 
-        frappe.confirm(`Delete ${listview.doctype} ${name}?`, () => {
-            frappe.call({
-                method: "frappe.client.delete",
-                args: { doctype: listview.doctype, name },
-                callback: (r) => {
-                    if (!r.exc) {
-                        frappe.show_alert(`${listview.doctype} deleted`);
-
-                        // 1. Instant UI Feedback: Fade out and remove
-                        $row.fadeOut(300, function () {
-                            $(this).remove();
-                        });
-
-                        // 2. Clear from local data array to prevent ghost entries
-                        if (listview.data) {
-                            listview.data = listview.data.filter(d => d.name !== name);
+        function do_standard_delete() {
+            frappe.confirm(`Delete ${listview.doctype} ${name}?`, () => {
+                frappe.call({
+                    method: "frappe.client.delete",
+                    args: { doctype: listview.doctype, name },
+                    callback: (r) => {
+                        if (!r.exc) {
+                            frappe.show_alert(`${listview.doctype} deleted`);
+                            $row.fadeOut(300, function () { $(this).remove(); });
+                            if (listview.data) {
+                                listview.data = listview.data.filter(d => d.name !== name);
+                            }
+                            frappe.model.remove_from_locals(listview.doctype, name);
+                            listview.refresh();
                         }
+                    }
+                });
+            });
+        }
 
-                        // 3. Clear client-side cache (locals) to prevent stale data on recreate
-                        frappe.model.remove_from_locals(listview.doctype, name);
+        if (listview.doctype === "Invoice" || listview.doctype === "Purchase") {
+            frappe.call({
+                method: "company.company.api.check_mutual_invoice_purchase_connection",
+                args: { doctype: listview.doctype, name: name },
+                callback: (r) => {
+                    if (r.message && r.message.mutually_connected) {
+                        const linked_doc = r.message.linked_doc;
+                        const linked_dt = r.message.linked_doctype;
 
-                        // 4. Trigger refresh to sync count and other UI elements
-                        listview.refresh();
+                        const inv_name = listview.doctype === "Invoice" ? name : linked_doc;
+                        const pur_name = listview.doctype === "Purchase" ? name : linked_doc;
+
+                        frappe.confirm(
+                            __("{0} <b>{1}</b> and {2} <b>{3}</b> are connected together.<br><br>Do you want to delete <b>BOTH</b> {0} and {2}?", [listview.doctype, name, linked_dt, linked_doc]),
+                            () => {
+                                frappe.call({
+                                    method: "company.company.api.delete_linked_invoice_and_purchase",
+                                    args: { invoice: inv_name, purchase: pur_name },
+                                    freeze: true,
+                                    freeze_message: __("Deleting connected Invoice & Purchase..."),
+                                    callback: (res) => {
+                                        if (!res.exc) {
+                                            frappe.show_alert({message: __("Invoice and Purchase deleted successfully"), indicator: "green"});
+                                            $row.fadeOut(300, function () { $(this).remove(); });
+                                            if (listview.data) {
+                                                listview.data = listview.data.filter(d => d.name !== name && d.name !== linked_doc);
+                                            }
+                                            frappe.model.remove_from_locals(listview.doctype, name);
+                                            frappe.model.remove_from_locals(linked_dt, linked_doc);
+                                            listview.refresh();
+                                        }
+                                    }
+                                });
+                            }
+                        );
+                    } else {
+                        do_standard_delete();
                     }
                 }
             });
-        });
+        } else {
+            do_standard_delete();
+        }
     });
 }
 

@@ -73,6 +73,47 @@ frappe.ui.form.on("Invoice", {
                 else if (frm.doc.grand_total === Math.ceil(natural)) frm._rounding_mode = 'ceil';
             }
         }
+
+        // Mutual Connection Check for Linked Deletion
+        if (!frm.is_new()) {
+            frappe.call({
+                method: "company.company.api.check_mutual_invoice_purchase_connection",
+                args: { doctype: "Invoice", name: frm.doc.name },
+                callback(r) {
+                    if (r.message && r.message.mutually_connected) {
+                        const linked_pur = r.message.linked_doc;
+
+                        setTimeout(() => {
+                            const $delete_btn = frm.page.menu.find('a:contains("Delete")');
+                            if ($delete_btn.length) {
+                                $delete_btn.off('click').on('click', function (e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+
+                                    frappe.confirm(
+                                        __("Invoice <b>{0}</b> and Purchase <b>{1}</b> are connected together.<br><br>Do you want to delete <b>BOTH</b> Invoice and Purchase?", [frm.doc.name, linked_pur]),
+                                        function () {
+                                            frappe.call({
+                                                method: "company.company.api.delete_linked_invoice_and_purchase",
+                                                args: { invoice: frm.doc.name, purchase: linked_pur },
+                                                freeze: true,
+                                                freeze_message: __("Deleting connected Invoice & Purchase..."),
+                                                callback(res) {
+                                                    if (!res.exc) {
+                                                        frappe.show_alert({ message: __("Invoice and Purchase deleted successfully"), indicator: "green" });
+                                                        frappe.set_route("List", "Invoice");
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    );
+                                });
+                            }
+                        }, 500);
+                    }
+                }
+            });
+        }
     }
 });
 
