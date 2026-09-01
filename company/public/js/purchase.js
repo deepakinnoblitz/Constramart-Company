@@ -80,7 +80,6 @@ frappe.ui.form.on("Purchase", {
     },
 
     refresh(frm) {
-
         // Detect rounding mode from existing roundoff
         if (frm.doc.roundoff) {
             const natural = flt(frm.doc.grand_total - frm.doc.roundoff, 2);
@@ -88,6 +87,47 @@ frappe.ui.form.on("Purchase", {
                 if (frm.doc.grand_total === Math.floor(natural)) frm._rounding_mode = 'floor';
                 else if (frm.doc.grand_total === Math.ceil(natural)) frm._rounding_mode = 'ceil';
             }
+        }
+
+        // Mutual Connection Check for Linked Deletion
+        if (!frm.is_new()) {
+            frappe.call({
+                method: "company.company.api.check_mutual_invoice_purchase_connection",
+                args: { doctype: "Purchase", name: frm.doc.name },
+                callback(r) {
+                    if (r.message && r.message.mutually_connected) {
+                        const linked_inv = r.message.linked_doc;
+
+                        setTimeout(() => {
+                            const $delete_btn = frm.page.menu.find('a:contains("Delete")');
+                            if ($delete_btn.length) {
+                                $delete_btn.off('click').on('click', function (e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+
+                                    frappe.confirm(
+                                        __("Purchase <b>{0}</b> and Invoice <b>{1}</b> are connected together.<br><br>Do you want to delete <b>BOTH</b> Purchase and Invoice?", [frm.doc.name, linked_inv]),
+                                        function () {
+                                            frappe.call({
+                                                method: "company.company.api.delete_linked_invoice_and_purchase",
+                                                args: { invoice: linked_inv, purchase: frm.doc.name },
+                                                freeze: true,
+                                                freeze_message: __("Deleting connected Purchase & Invoice..."),
+                                                callback(res) {
+                                                    if (!res.exc) {
+                                                        frappe.show_alert({ message: __("Purchase and Invoice deleted successfully"), indicator: "green" });
+                                                        frappe.set_route("List", "Purchase");
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    );
+                                });
+                            }
+                        }, 500);
+                    }
+                }
+            });
         }
     }
 });

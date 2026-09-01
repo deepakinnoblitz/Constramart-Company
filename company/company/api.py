@@ -4097,3 +4097,105 @@ def export_sales_vs_purchase_excel(filters=None):
     frappe.response['filecontent'] = output.getvalue()
     frappe.response['type'] = 'binary'
 
+
+@frappe.whitelist()
+def check_mutual_invoice_purchase_connection(doctype, name):
+    """
+    Checks if Invoice and Purchase are strictly mutually connected together.
+    """
+    if not doctype or not name:
+        return {"mutually_connected": False}
+
+    if doctype == "Invoice":
+        inv = frappe.db.get_value("Invoice", name, ["purchase_id", "reference_purchase"], as_dict=True)
+        if not inv:
+            return {"mutually_connected": False}
+
+        pur_id = inv.get("purchase_id") or inv.get("reference_purchase")
+        if not pur_id or not frappe.db.exists("Purchase", pur_id):
+            return {"mutually_connected": False}
+
+        pur = frappe.db.get_value("Purchase", pur_id, ["invoice_id", "reference_invoice"], as_dict=True)
+        if pur and (pur.get("invoice_id") == name or pur.get("reference_invoice") == name):
+            return {
+                "mutually_connected": True,
+                "linked_doctype": "Purchase",
+                "linked_doc": pur_id
+            }
+
+    elif doctype == "Purchase":
+        pur = frappe.db.get_value("Purchase", name, ["invoice_id", "reference_invoice"], as_dict=True)
+        if not pur:
+            return {"mutually_connected": False}
+
+        inv_id = pur.get("invoice_id") or pur.get("reference_invoice")
+        if not inv_id or not frappe.db.exists("Invoice", inv_id):
+            return {"mutually_connected": False}
+
+        inv = frappe.db.get_value("Invoice", inv_id, ["purchase_id", "reference_purchase"], as_dict=True)
+        if inv and (inv.get("purchase_id") == name or inv.get("reference_purchase") == name):
+            return {
+                "mutually_connected": True,
+                "linked_doctype": "Invoice",
+                "linked_doc": inv_id
+            }
+
+    return {"mutually_connected": False}
+
+
+@frappe.whitelist()
+def delete_linked_invoice_and_purchase(invoice, purchase):
+    """
+    Unlinks reference pointers between mutually connected Invoice and Purchase, then deletes both.
+    """
+    if not invoice or not purchase:
+        frappe.throw(frappe._("Invoice and Purchase names are required."))
+
+    inv = frappe.db.get_value("Invoice", invoice, ["purchase_id", "reference_purchase"], as_dict=True) or {}
+    pur = frappe.db.get_value("Purchase", purchase, ["invoice_id", "reference_invoice"], as_dict=True) or {}
+
+    inv_pur = inv.get("purchase_id") or inv.get("reference_purchase")
+    pur_inv = pur.get("invoice_id") or pur.get("reference_invoice")
+
+    if inv_pur != purchase or pur_inv != invoice:
+        frappe.throw(frappe._("Invoice {0} and Purchase {1} are not mutually connected together.").format(invoice, purchase))
+
+    # Temporarily unlink reference pointers to bypass LinkExistsError
+    frappe.db.set_value("Invoice", invoice, "purchase_id", None, update_modified=False)
+    frappe.db.set_value("Invoice", invoice, "reference_purchase", None, update_modified=False)
+    frappe.db.set_value("Purchase", purchase, "invoice_id", None, update_modified=False)
+    frappe.db.set_value("Purchase", purchase, "reference_invoice", None, update_modified=False)
+    frappe.db.commit()
+
+    frappe.delete_doc("Invoice", invoice, ignore_permissions=False)
+    frappe.delete_doc("Purchase", purchase, ignore_permissions=False)
+    frappe.db.commit()
+
+    return True
+
+
+@frappe.whitelist()
+def cancel_linked_invoice_and_purchase(invoice, purchase):
+    """
+    Unlinks reference pointers between mutually connected submitted Invoice and Purchase, then cancels both.
+    """
+    if not invoice or not purchase:
+        frappe.throw(frappe._("Invoice and Purchase names are required."))
+
+    inv_doc = frappe.get_doc("Invoice", invoice)
+    pur_doc = frappe.get_doc("Purchase", purchase)
+
+    frappe.db.set_value("Invoice", invoice, "purchase_id", None, update_modified=False)
+    frappe.db.set_value("Invoice", invoice, "reference_purchase", None, update_modified=False)
+    frappe.db.set_value("Purchase", purchase, "invoice_id", None, update_modified=False)
+    frappe.db.set_value("Purchase", purchase, "reference_invoice", None, update_modified=False)
+    frappe.db.commit()
+
+    if inv_doc.docstatus == 1:
+        inv_doc.cancel()
+    if pur_doc.docstatus == 1:
+        pur_doc.cancel()
+
+    frappe.db.commit()
+    return True
+

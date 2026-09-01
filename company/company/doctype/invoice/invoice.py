@@ -62,6 +62,16 @@ class Invoice(Document):
             frappe.throw(_("This Invoice is locked because {0} Payment Collection(s) have been recorded. To edit this Invoice, please delete the linked collections first.").format(collection_count))
 
     def on_trash(self):
+        # Clear mutual link reference with Purchase to prevent LinkExistsError on deletion (Form, List, or API)
+        pur_id = self.purchase_id or getattr(self, "reference_purchase", None)
+        if pur_id and frappe.db.exists("Purchase", pur_id):
+            pur = frappe.db.get_value("Purchase", pur_id, ["invoice_id", "reference_invoice"], as_dict=True)
+            if pur and (pur.get("invoice_id") == self.name or pur.get("reference_invoice") == self.name):
+                frappe.db.set_value("Purchase", pur_id, "invoice_id", None, update_modified=False)
+                frappe.db.set_value("Purchase", pur_id, "reference_invoice", None, update_modified=False)
+                frappe.db.set_value("Invoice", self.name, "purchase_id", None, update_modified=False)
+                frappe.db.set_value("Invoice", self.name, "reference_purchase", None, update_modified=False)
+
         # Update customer_status if needed
         if self.customer_id:
             remaining_count = frappe.db.count("Invoice", filters={

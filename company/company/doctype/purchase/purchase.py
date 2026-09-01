@@ -70,6 +70,17 @@ class Purchase(Document):
 
     def on_trash(self):
         self.check_purchase_collections()
+
+        # Clear mutual link reference with Invoice to prevent LinkExistsError on deletion (Form, List, or API)
+        inv_id = self.invoice_id or getattr(self, "reference_invoice", None)
+        if inv_id and frappe.db.exists("Invoice", inv_id):
+            inv = frappe.db.get_value("Invoice", inv_id, ["purchase_id", "reference_purchase"], as_dict=True)
+            if inv and (inv.get("purchase_id") == self.name or inv.get("reference_purchase") == self.name):
+                frappe.db.set_value("Invoice", inv_id, "purchase_id", None, update_modified=False)
+                frappe.db.set_value("Invoice", inv_id, "reference_purchase", None, update_modified=False)
+                frappe.db.set_value("Purchase", self.name, "invoice_id", None, update_modified=False)
+                frappe.db.set_value("Purchase", self.name, "reference_purchase", None, update_modified=False)
+
         # Clear Invoice reference when Purchase is deleted
         if self.invoice_id:
             frappe.db.set_value("Invoice", self.invoice_id, "reference_purchase", None)
