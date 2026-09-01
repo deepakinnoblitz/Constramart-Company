@@ -3890,18 +3890,22 @@ def export_sales_vs_purchase_excel(filters=None):
     ws.title = "Sales vs Purchase"
 
     headers = [
-        "S.No", "Invoice No", "Inv Date", "Customer Name", "Location", "Status",
+        "S.No", "Invoice No", "Inv Date", "Customer Name", "Location", "Status", "Cust. Opening Bal",
         "Item Name", "Quantity (Qty)", "Price (Rate)", "Item Subtotal",
-        "Sales Amt (Excl. Tax)", "Tax Amount", "Sales Amt",
-        "Purchase No", "Pur Date", "Vendor(s)",
+        "Sales Amt (Excl. Tax)", "Tax Amount", "Sales Amt", "Advance Amt", "Received Amt", "Balance Amt",
+        "Sales vs Purchase",
+        "Purchase No", "Pur Date", "Vendor(s)", "Vendor Opening Bal",
         "Pur Item Name", "Pur Qty", "Pur Rate", "Pur Item Subtotal",
-        "Pur Amt (Excl. Tax)", "Pur Tax Amount", "Purchase Amt",
+        "Pur Amt (Excl. Tax)", "Pur Tax Amount", "Purchase Amt", "Pur Advance Amt", "Paid Amt", "Pur Balance Amt",
         "Profit", "Margin %",
         "Sales BP", "Purchase BP"
     ]
 
     header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    sep_fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
+    sep_font = Font(name="Calibri", size=10, bold=True, color="000000")
+    sep_align = Alignment(horizontal="center", vertical="center", textRotation=90)
     center_align = Alignment(horizontal="center", vertical="center")
     left_align = Alignment(horizontal="left", vertical="center")
     right_align = Alignment(horizontal="right", vertical="center")
@@ -3913,12 +3917,19 @@ def export_sales_vs_purchase_excel(filters=None):
     )
 
     ws.append(headers)
+    ws.row_dimensions[1].height = 24.1  # Fixed 0.85 CM header height
 
     for col_num in range(1, len(headers) + 1):
         cell = ws.cell(row=1, column=col_num)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_align
+        cell.border = thin_border
+        if col_num == 18:
+            cell.font = sep_font
+            cell.fill = sep_fill
+            cell.alignment = sep_align
+        else:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_align
 
     def format_excel_date(d_val):
         if not d_val:
@@ -3967,6 +3978,7 @@ def export_sales_vs_purchase_excel(filters=None):
                 format_excel_str(row.get("customer_name")),
                 format_excel_str(row.get("location")),
                 format_excel_str(status),
+                flt(row.get("customer_opening_balance")),
 
                 format_excel_str(s_it.get("item_name")),
                 flt(s_it.get("quantity")) if "quantity" in s_it else 0.0,
@@ -3976,10 +3988,16 @@ def export_sales_vs_purchase_excel(filters=None):
                 flt(row.get("amount_exclusive")),
                 flt(row.get("total_tax_amount")),
                 flt(row.get("sales_amount")),
+                flt(row.get("advance_amount_paid")),
+                flt(row.get("received_amount")),
+                flt(row.get("balance_amount")),
+
+                "",
 
                 format_excel_str(row.get("purchase_nos")),
                 format_excel_date(row.get("purchase_dates")),
                 format_excel_str(row.get("vendor_names")),
+                flt(row.get("vendor_opening_balance")),
 
                 format_excel_str(p_it.get("item_name")),
                 flt(p_it.get("quantity")) if "quantity" in p_it else 0.0,
@@ -3989,6 +4007,10 @@ def export_sales_vs_purchase_excel(filters=None):
                 flt(row.get("purchase_amount_exclusive")),
                 flt(row.get("purchase_total_tax_amount")),
                 flt(row.get("purchase_amount")),
+                flt(row.get("purchase_advance_amount")),
+                flt(row.get("paid_amount")),
+                flt(row.get("purchase_balance_amount")),
+
                 flt(row.get("gross_profit")),
                 flt(row.get("margin_percent")),
                 format_excel_str(row.get("sales_business_person")),
@@ -4001,16 +4023,20 @@ def export_sales_vs_purchase_excel(filters=None):
                 cell = ws.cell(row=r_num, column=col_num)
                 cell.border = thin_border
 
-                if col_num in [9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24]:
+                if col_num == 18:
+                    cell.fill = sep_fill
+                    cell.font = sep_font
+                    cell.alignment = sep_align
+                elif col_num in [7, 10, 11, 12, 13, 14, 15, 16, 17, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33]:
                     cell.number_format = "₹#,##0.00"
                     cell.alignment = right_align
-                elif col_num in [8, 18]:
+                elif col_num in [9, 24]:
                     cell.number_format = "#,##0.00"
                     cell.alignment = right_align
-                elif col_num == 25:
+                elif col_num == 34:
                     cell.number_format = '0.00"%"'
                     cell.alignment = right_align
-                elif col_num in [1, 3, 6, 15]:
+                elif col_num in [1, 3, 6, 20]:
                     cell.alignment = center_align
                 else:
                     cell.alignment = left_align
@@ -4024,7 +4050,7 @@ def export_sales_vs_purchase_excel(filters=None):
 
         # Merge invoice-level columns vertically if block has multiple item rows
         if end_row > start_row:
-            invoice_level_cols = [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16, 21, 22, 23, 24, 25, 26, 27]
+            invoice_level_cols = [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
             for col_idx in invoice_level_cols:
                 ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
 
@@ -4040,10 +4066,28 @@ def export_sales_vs_purchase_excel(filters=None):
                 bottom=thick_bottom
             )
 
+    # Merge Column 18 (Sales vs Purchase separator) vertically from Header Row 1 down to last data row
+    if current_row > 2:
+        ws.merge_cells(start_row=1, start_column=18, end_row=current_row - 1, end_column=18)
+
+        # Dynamically adjust data row heights ONLY (excluding header row 1) so total merged cell height reaches minimum 135pt
+        total_data_rows = current_row - 2
+        approx_total_height = 20.0 + (total_data_rows * 20.0)
+        min_required_height = 105.0
+
+        if total_data_rows > 0 and approx_total_height < min_required_height:
+            needed_extra_data_height = min_required_height - 20.0
+            height_per_data_row = max(20.0, needed_extra_data_height / total_data_rows)
+            for r_idx in range(2, current_row):
+                ws.row_dimensions[r_idx].height = height_per_data_row
+
     for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
         col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        if col[0].column == 18:
+            ws.column_dimensions[col_letter].width = 6
+        else:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
     output = io.BytesIO()
     wb.save(output)
