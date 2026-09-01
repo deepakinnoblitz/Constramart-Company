@@ -2,16 +2,35 @@ import frappe
 import json
 
 
+def get_opening_balance_at_creation(entity_id, creation_time):
+    """
+    Returns opening balance of Customer/Vendor at the exact time of ref creation.
+    Queries Customer Opening Balance Log prior to creation, or falls back to initial_opening_balance.
+    """
+    if not entity_id or not creation_time:
+        return 0.0
+
+    log = frappe.db.sql("""
+        SELECT balance 
+        FROM `tabCustomer Opening Balance Log`
+        WHERE parent = %s AND creation <= %s
+        ORDER BY idx DESC, creation DESC
+        LIMIT 1
+    """, (entity_id, creation_time), as_dict=True)
+
+    if log and log[0].get("balance") is not None:
+        return float(log[0].balance)
+
+    cust = frappe.db.get_value("Customer", entity_id, ["initial_opening_balance", "opening_balance"], as_dict=True) or {}
+    return float(cust.get("initial_opening_balance") or cust.get("opening_balance") or 0.0)
+
+
 @frappe.whitelist()
 def execute(filters=None):
     if isinstance(filters, str):
         filters = json.loads(filters)
     filters = filters or {}
 
-    # -------------------------------
-    # PAGINATION (Skip if exporting)
-    # -------------------------------
-    # Detect if we are exporting
     is_export = (
         frappe.flags.is_export 
         or frappe.form_dict.get("is_export") in ["true", "1"]
@@ -31,9 +50,6 @@ def execute(filters=None):
     else:
         data = get_data(filters, limit=page_length, offset=offset)
 
-    # -------------------------------
-    # POST-PROCESS DATA (New vs Old Logic)
-    # -------------------------------
     customer_ids = list(set([row.customer_id for row in data if row.customer_id]))
     first_invoice_map = {}
     if customer_ids:
@@ -50,10 +66,18 @@ def execute(filters=None):
         for r in first_records:
             first_invoice_map[r.customer_id] = r.first_invoice
 
-    # Apply row numbers and badges
+    # Apply row numbers, badges, and calculate opening balances at creation time
     for i, row in enumerate(data, start=(1 if is_export else offset + 1)):
         row["row_no"] = i
         
+        # Calculate Customer Opening Balance at time of Invoice creation
+        row["customer_opening_balance"] = get_opening_balance_at_creation(row.get("customer_id"), row.get("inv_creation"))
+
+        # Calculate Vendor Opening Balance at time of Purchase creation
+        vendor_id = (row.get("vendor_ids") or "").split(",")[0] if row.get("vendor_ids") else None
+        pur_creation = (row.get("pur_creations") or "").split(",")[0] if row.get("pur_creations") else None
+        row["vendor_opening_balance"] = get_opening_balance_at_creation(vendor_id, pur_creation) if vendor_id else 0.0
+
         # Determine status: Only the first ever invoice for a customer is 'New'
         first_id = first_invoice_map.get(row.customer_id)
         status_label = "NEW" if (row.invoice_no == first_id) else "OLD"
@@ -62,15 +86,11 @@ def execute(filters=None):
             row["customer_status"] = status_label
         else:
             color_bg = "#10b981" if status_label == "NEW" else "#3b82f6"
-            # High-end styling: Bold uppercase with modern rounded pill design
             row["customer_status"] = f'''
                 <span style="background-color: {color_bg}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; line-height: 1; letter-spacing: 0.5px;">{status_label}</span>
             '''.strip()
 
-    # Total Count logic (approximate for pagination)
     total_count = get_total_count(filters)
-
-    # Summaries
     report_summary = get_report_summary(filters)
 
     summary_data = {
@@ -90,15 +110,23 @@ def get_columns():
         {"fieldname": "customer_name", "label": "Customer Name", "fieldtype": "Data", "width": 180},
         {"fieldname": "location", "label": "Location", "fieldtype": "Data", "width": 160},
         {"fieldname": "customer_status", "label": "Status", "fieldtype": "Data", "width": 80},
+        {"fieldname": "customer_opening_balance", "label": "Cust. Opening Bal", "fieldtype": "Currency", "width": 150},
         {"fieldname": "amount_exclusive", "label": "Sales Amt (Excl. Tax)", "fieldtype": "Currency", "width": 160},
         {"fieldname": "total_tax_amount", "label": "Tax Amount", "fieldtype": "Currency", "width": 130},
         {"fieldname": "sales_amount", "label": "Sales Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "advance_amount_paid", "label": "Advance Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "received_amount", "label": "Received Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "balance_amount", "label": "Balance Amt", "fieldtype": "Currency", "width": 140},
         {"fieldname": "purchase_nos", "label": "Purchase No", "fieldtype": "Data", "width": 120},
         {"fieldname": "purchase_dates", "label": "Pur Date", "fieldtype": "Data", "width": 110},
         {"fieldname": "vendor_names", "label": "Vendor(s)", "fieldtype": "Data", "width": 180},
+        {"fieldname": "vendor_opening_balance", "label": "Vendor Opening Bal", "fieldtype": "Currency", "width": 150},
         {"fieldname": "purchase_amount_exclusive", "label": "Pur Amt (Excl. Tax)", "fieldtype": "Currency", "width": 160},
         {"fieldname": "purchase_total_tax_amount", "label": "Pur Tax Amount", "fieldtype": "Currency", "width": 130},
         {"fieldname": "purchase_amount", "label": "Purchase Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "purchase_advance_amount", "label": "Pur Advance Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "paid_amount", "label": "Paid Amt", "fieldtype": "Currency", "width": 140},
+        {"fieldname": "purchase_balance_amount", "label": "Pur Balance Amt", "fieldtype": "Currency", "width": 140},
         {"fieldname": "gross_profit", "label": "Profit", "fieldtype": "Currency", "width": 140},
         {"fieldname": "margin_percent", "label": "Margin %", "fieldtype": "Percent", "width": 110},
         {"fieldname": "sales_business_person", "label": "Sales BP", "fieldtype": "Link", "options": "Business Person", "width": 130},
@@ -109,9 +137,6 @@ def get_columns():
 def get_data(filters, limit=None, offset=None):
     conditions, values = get_conditions(filters)
     
-    # Main logic: Link Invoices and Purchases using UNION to catch both directions
-    # Then group by Invoice to handle Many-to-One and One-to-Many
-    
     limit_clause = f"LIMIT {limit} OFFSET {offset}" if limit is not None else ""
 
     having_clause = "HAVING SUM(CASE WHEN pur.name IS NOT NULL THEN 1 ELSE 0 END) > 0" if filters.get("only_linked") else ""
@@ -120,18 +145,27 @@ def get_data(filters, limit=None, offset=None):
         SELECT 
             inv.name as invoice_no,
             inv.invoice_date,
+            inv.creation as inv_creation,
             inv.customer_id,
             inv.customer_name,
             inv.location,
+            COALESCE(inv.advance_amount_paid, 0) as advance_amount_paid,
+            COALESCE(inv.received_amount, 0) as received_amount,
+            COALESCE(inv.balance_amount, 0) as balance_amount,
             inv_totals.amount_exclusive,
             inv_totals.total_tax_amount,
             inv.grand_total as sales_amount,
             GROUP_CONCAT(DISTINCT pur.name) as purchase_nos,
             GROUP_CONCAT(DISTINCT pur.bill_date) as purchase_dates,
+            GROUP_CONCAT(DISTINCT pur.vendor_id) as vendor_ids,
+            GROUP_CONCAT(DISTINCT pur.creation) as pur_creations,
             GROUP_CONCAT(DISTINCT pur.vendor_name) as vendor_names,
             SUM(COALESCE(pur_totals.pur_excl, 0)) as purchase_amount_exclusive,
             SUM(COALESCE(pur_totals.pur_tax, 0)) as purchase_total_tax_amount,
             SUM(COALESCE(pur.grand_total, 0)) as purchase_amount,
+            SUM(COALESCE(pur.advance_amount_paid, 0)) as purchase_advance_amount,
+            SUM(COALESCE(pur.paid_amount, pur.received_amount, 0)) as paid_amount,
+            SUM(COALESCE(pur.balance_amount, 0)) as purchase_balance_amount,
             (inv.grand_total - SUM(COALESCE(pur.grand_total, 0))) as gross_profit,
             CASE 
                 WHEN inv.grand_total > 0 THEN ((inv.grand_total - SUM(COALESCE(pur.grand_total, 0))) / inv.grand_total) * 100

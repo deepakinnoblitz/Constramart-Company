@@ -3890,12 +3890,12 @@ def export_sales_vs_purchase_excel(filters=None):
     ws.title = "Sales vs Purchase"
 
     headers = [
-        "S.No", "Invoice No", "Inv Date", "Customer Name", "Location", "Status",
+        "S.No", "Invoice No", "Inv Date", "Customer Name", "Location", "Status", "Cust. Opening Bal",
         "Item Name", "Quantity (Qty)", "Price (Rate)", "Item Subtotal",
-        "Sales Amt (Excl. Tax)", "Tax Amount", "Sales Amt",
-        "Purchase No", "Pur Date", "Vendor(s)",
+        "Sales Amt (Excl. Tax)", "Tax Amount", "Sales Amt", "Advance Amt", "Received Amt", "Balance Amt",
+        "Purchase No", "Pur Date", "Vendor(s)", "Vendor Opening Bal",
         "Pur Item Name", "Pur Qty", "Pur Rate", "Pur Item Subtotal",
-        "Pur Amt (Excl. Tax)", "Pur Tax Amount", "Purchase Amt",
+        "Pur Amt (Excl. Tax)", "Pur Tax Amount", "Purchase Amt", "Pur Advance Amt", "Paid Amt", "Pur Balance Amt",
         "Profit", "Margin %",
         "Sales BP", "Purchase BP"
     ]
@@ -3967,6 +3967,7 @@ def export_sales_vs_purchase_excel(filters=None):
                 format_excel_str(row.get("customer_name")),
                 format_excel_str(row.get("location")),
                 format_excel_str(status),
+                flt(row.get("customer_opening_balance")),
 
                 format_excel_str(s_it.get("item_name")),
                 flt(s_it.get("quantity")) if "quantity" in s_it else 0.0,
@@ -3976,10 +3977,14 @@ def export_sales_vs_purchase_excel(filters=None):
                 flt(row.get("amount_exclusive")),
                 flt(row.get("total_tax_amount")),
                 flt(row.get("sales_amount")),
+                flt(row.get("advance_amount_paid")),
+                flt(row.get("received_amount")),
+                flt(row.get("balance_amount")),
 
                 format_excel_str(row.get("purchase_nos")),
                 format_excel_date(row.get("purchase_dates")),
                 format_excel_str(row.get("vendor_names")),
+                flt(row.get("vendor_opening_balance")),
 
                 format_excel_str(p_it.get("item_name")),
                 flt(p_it.get("quantity")) if "quantity" in p_it else 0.0,
@@ -3989,6 +3994,10 @@ def export_sales_vs_purchase_excel(filters=None):
                 flt(row.get("purchase_amount_exclusive")),
                 flt(row.get("purchase_total_tax_amount")),
                 flt(row.get("purchase_amount")),
+                flt(row.get("purchase_advance_amount")),
+                flt(row.get("paid_amount")),
+                flt(row.get("purchase_balance_amount")),
+
                 flt(row.get("gross_profit")),
                 flt(row.get("margin_percent")),
                 format_excel_str(row.get("sales_business_person")),
@@ -4001,16 +4010,16 @@ def export_sales_vs_purchase_excel(filters=None):
                 cell = ws.cell(row=r_num, column=col_num)
                 cell.border = thin_border
 
-                if col_num in [9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24]:
+                if col_num in [7, 10, 11, 12, 13, 14, 15, 16, 17, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32]:
                     cell.number_format = "₹#,##0.00"
                     cell.alignment = right_align
-                elif col_num in [8, 18]:
+                elif col_num in [9, 23]:
                     cell.number_format = "#,##0.00"
                     cell.alignment = right_align
-                elif col_num == 25:
+                elif col_num == 33:
                     cell.number_format = '0.00"%"'
                     cell.alignment = right_align
-                elif col_num in [1, 3, 6, 15]:
+                elif col_num in [1, 3, 6, 19]:
                     cell.alignment = center_align
                 else:
                     cell.alignment = left_align
@@ -4024,7 +4033,7 @@ def export_sales_vs_purchase_excel(filters=None):
 
         # Merge invoice-level columns vertically if block has multiple item rows
         if end_row > start_row:
-            invoice_level_cols = [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16, 21, 22, 23, 24, 25, 26, 27]
+            invoice_level_cols = [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
             for col_idx in invoice_level_cols:
                 ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
 
