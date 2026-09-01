@@ -35,8 +35,8 @@ frappe.views.ListView = class CustomListView extends OriginalListView {
 
     render_list() {
         super.render_list();
-        add_global_action_buttons(this); // 🔥 Always after render
-        add_global_row_click_handler(this); // 🔥 Add row click navigation
+        add_global_action_buttons(this); //  Always after render
+        add_global_row_click_handler(this); //  Add row click navigation
     }
 
     refresh() {

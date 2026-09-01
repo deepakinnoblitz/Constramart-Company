@@ -72,6 +72,65 @@ frappe.query_reports["Purchase Report"] = {
     onload(report) {
         report.set_filter_value("page_length", 10);
 
+        report.page.add_inner_button(__("Export Purchase Details"), function () {
+            let filters = report.get_filter_values(true) || {};
+
+            frappe.call({
+                method: 'company.company.api.get_purchase_export_count',
+                args: {
+                    filters: JSON.stringify(filters)
+                },
+                callback: function (r) {
+                    let counts = r.message || { purchase_count: 0, item_count: 0 };
+                    let pur_count = counts.purchase_count || 0;
+
+                    if (pur_count === 0) {
+                        frappe.msgprint({
+                            title: __('No Purchases Found'),
+                            message: __('There are no purchases matching the selected filters to export.'),
+                            indicator: 'orange'
+                        });
+                        return;
+                    }
+
+                    frappe.confirm(
+                        __('Are you sure you want to download <b>{0} Purchase(s)</b> to Excel?', [pur_count]),
+                        function () {
+                            frappe.dom.freeze(__('Generating Excel Report, please wait...'));
+
+                            fetch('/api/method/company.company.api.export_purchase_itemized_excel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                                },
+                                body: $.param({
+                                    filters: JSON.stringify(filters)
+                                })
+                            })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                frappe.dom.unfreeze();
+                                let url = window.URL.createObjectURL(blob);
+                                let a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Purchase_Item_Details_Report.xlsx';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                                frappe.show_alert({ message: __('Excel Report downloaded successfully!'), indicator: 'green' });
+                            })
+                            .catch(err => {
+                                frappe.dom.unfreeze();
+                                frappe.msgprint(__('Failed to generate Excel report. Please try again.'));
+                            });
+                        }
+                    );
+                }
+            });
+        });
+
         // Store button references
         report._prev_btn = report.page.add_inner_button("⬅ Prev", () => {
             const page = report.get_filter_value("page");

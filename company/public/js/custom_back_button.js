@@ -19,10 +19,36 @@ function add_global_back_button(frm) {
 
     // Click action
     backBtn.on('click', function() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else if (frm.doctype) {
-            frappe.set_route('List', frm.doctype);
+        let is_dirty = false;
+        if (frm.is_dirty && frm.is_dirty()) is_dirty = true;
+        if (frm.doc && (frm.doc.__unsaved || frm.doc.__islocal)) is_dirty = true;
+        if ($('.indicator-pill:contains("Not Saved"), .indicator-pill:contains("NOT SAVED")').length > 0) is_dirty = true;
+
+        if (is_dirty) {
+            frappe.confirm(
+                __('You have unsaved changes. Are you sure you want to leave without saving?'),
+                function() {
+                    // User confirmed: clear unsaved in-memory draft for existing saved doc
+                    if (frm.doc && !frm.is_new()) {
+                        frm.doc.__unsaved = 0;
+                        frappe.model.clear_doc(frm.doctype, frm.docname);
+                    }
+                    frm._bypassing_unsaved_check = true;
+                    window.cur_frm = null;
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else if (frm.doctype) {
+                        frappe.set_route('List', frm.doctype);
+                    }
+                    setTimeout(() => { frm._bypassing_unsaved_check = false; }, 500);
+                }
+            );
+        } else {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else if (frm.doctype) {
+                frappe.set_route('List', frm.doctype);
+            }
         }
     });
 

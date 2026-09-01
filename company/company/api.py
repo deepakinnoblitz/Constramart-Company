@@ -2997,15 +2997,25 @@ def get_unlinked_purchases(doctype, txt, searchfield, start, page_len, filters):
     """, (link_search, link_search, start, page_len))
 
 
-@frappe.whitelist()
-def get_sales_export_count(filters=None, names=None):
-    """Returns invoice count and item count for confirmation dialog before export."""
-    if isinstance(filters, str):
-        filters = frappe.parse_json(filters) or {}
-    if isinstance(names, str):
-        names = frappe.parse_json(names) or []
+def parse_filter_val(val):
+    """Helper to parse raw or JSON-encoded filter values."""
+    if val is None or val == "":
+        return None
+    if isinstance(val, str):
+        val = val.strip()
+        if val.startswith("[") and val.endswith("]"):
+            try:
+                parsed = frappe.parse_json(val)
+                if parsed is not None:
+                    return parsed
+            except Exception:
+                pass
+    return val
 
-    conditions = []
+
+@frappe.whitelist()
+def _build_sales_export_conditions(filters, names):
+    conditions = ["inv.docstatus < 2"]
     values = {}
 
     if names:
@@ -3023,10 +3033,219 @@ def get_sales_export_count(filters=None, names=None):
             conditions.append("inv.invoice_date <= %(to_date)s")
             values["to_date"] = filters.get("to_date")
 
-        if filters.get("customer_id"):
-            conditions.append("inv.customer_id = %(customer_id)s")
-            values["customer_id"] = filters.get("customer_id")
+        name_val = parse_filter_val(filters.get("name") or filters.get("invoice") or filters.get("ref_no"))
+        if name_val:
+            if isinstance(name_val, (list, tuple)) and len(name_val) == 2:
+                op = str(name_val[0]).upper()
+                pat = str(name_val[1])
+                if "LIKE" in op:
+                    if not pat.startswith("%") and not pat.endswith("%"):
+                        pat = f"%{pat}%"
+                    conditions.append("inv.name LIKE %(name_search)s")
+                    values["name_search"] = pat
+                else:
+                    conditions.append(f"inv.name {op} %(name_search)s")
+                    values["name_search"] = pat
+            elif isinstance(name_val, str):
+                if "%" in name_val:
+                    conditions.append("inv.name LIKE %(name_search)s")
+                    values["name_search"] = name_val
+                else:
+                    conditions.append("inv.name LIKE %(name_search)s")
+                    values["name_search"] = f"%{name_val}%"
 
+        cust_val = parse_filter_val(filters.get("customer") or filters.get("customer_id"))
+        if cust_val:
+            if isinstance(cust_val, (list, tuple)):
+                if len(cust_val) == 2 and str(cust_val[0]).upper() == "IN":
+                    cust_val = cust_val[1]
+                if isinstance(cust_val, (list, tuple)):
+                    placeholders = ", ".join([f"%(cust_{i})s" for i in range(len(cust_val))])
+                    conditions.append(f"inv.customer_id IN ({placeholders})")
+                    for i, c in enumerate(cust_val):
+                        values[f"cust_{i}"] = c
+                else:
+                    conditions.append("inv.customer_id = %(customer_id)s")
+                    values["customer_id"] = str(cust_val)
+            else:
+                cust_str = str(cust_val)
+                if "%" in cust_str:
+                    conditions.append("inv.customer_id LIKE %(customer_id)s")
+                else:
+                    conditions.append("inv.customer_id = %(customer_id)s")
+                values["customer_id"] = cust_str
+
+        cust_name_val = parse_filter_val(filters.get("customer_name"))
+        if cust_name_val:
+            if isinstance(cust_name_val, (list, tuple)) and len(cust_name_val) == 2:
+                cust_name_val = cust_name_val[1]
+            cname = str(cust_name_val)
+            if not cname.startswith("%") and not cname.endswith("%"):
+                cname = f"%{cname}%"
+            conditions.append("inv.customer_name LIKE %(customer_name)s")
+            values["customer_name"] = cname
+
+        comp_val = parse_filter_val(filters.get("company_name") or filters.get("billing_name"))
+        if comp_val:
+            if isinstance(comp_val, (list, tuple)) and len(comp_val) == 2:
+                comp_val = comp_val[1]
+            comp_str = str(comp_val)
+            if not comp_str.startswith("%") and not comp_str.endswith("%"):
+                comp_str = f"%{comp_str}%"
+            conditions.append("(inv.company_name LIKE %(company_name)s OR inv.billing_name LIKE %(company_name)s)")
+            values["company_name"] = comp_str
+
+        bp_val = parse_filter_val(filters.get("business_person_name") or filters.get("business_person"))
+        if bp_val:
+            if isinstance(bp_val, (list, tuple)) and len(bp_val) == 2:
+                bp_val = bp_val[1]
+            bp_str = str(bp_val)
+            if "%" in bp_str:
+                conditions.append("inv.business_person_name LIKE %(bp_name)s")
+            else:
+                conditions.append("inv.business_person_name = %(bp_name)s")
+            values["bp_name"] = bp_str
+
+        loc_val = parse_filter_val(filters.get("location"))
+        if loc_val:
+            if isinstance(loc_val, (list, tuple)):
+                if len(loc_val) == 2 and str(loc_val[0]).upper() == "IN":
+                    loc_val = loc_val[1]
+                if isinstance(loc_val, (list, tuple)):
+                    placeholders = ", ".join([f"%(loc_{i})s" for i in range(len(loc_val))])
+                    conditions.append(f"inv.location IN ({placeholders})")
+                    for i, l in enumerate(loc_val):
+                        values[f"loc_{i}"] = l
+                else:
+                    conditions.append("inv.location = %(location)s")
+                    values["location"] = str(loc_val)
+            else:
+                conditions.append("inv.location LIKE %(location)s")
+                values["location"] = f"%{loc_val}%"
+
+        if filters.get("gst_non_gst"):
+            if filters["gst_non_gst"] == "Non-GST":
+                conditions.append("inv.default_tax_type = 'Exempted'")
+            elif filters["gst_non_gst"] == "GST":
+                conditions.append("inv.default_tax_type != 'Exempted'")
+
+    return conditions, values
+
+
+def _build_purchase_export_conditions(filters, names):
+    conditions = ["pur.docstatus < 2"]
+    values = {}
+
+    if names:
+        conditions.append("pur.name IN %(names)s")
+        values["names"] = tuple(names)
+    else:
+        if filters.get("from_date") and filters.get("to_date"):
+            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
+            values["from_date"] = filters.get("from_date")
+            values["to_date"] = filters.get("to_date")
+        elif filters.get("from_date"):
+            conditions.append("pur.bill_date >= %(from_date)s")
+            values["from_date"] = filters.get("from_date")
+        elif filters.get("to_date"):
+            conditions.append("pur.bill_date <= %(to_date)s")
+            values["to_date"] = filters.get("to_date")
+
+        name_val = parse_filter_val(filters.get("name") or filters.get("purchase_id") or filters.get("purchase"))
+        if name_val:
+            if isinstance(name_val, (list, tuple)) and len(name_val) == 2:
+                op = str(name_val[0]).upper()
+                pat = str(name_val[1])
+                if "LIKE" in op:
+                    if not pat.startswith("%") and not pat.endswith("%"):
+                        pat = f"%{pat}%"
+                    conditions.append("pur.name LIKE %(name_search)s")
+                    values["name_search"] = pat
+                else:
+                    conditions.append(f"pur.name {op} %(name_search)s")
+                    values["name_search"] = pat
+            elif isinstance(name_val, str):
+                if "%" in name_val:
+                    conditions.append("pur.name LIKE %(name_search)s")
+                    values["name_search"] = name_val
+                else:
+                    conditions.append("pur.name LIKE %(name_search)s")
+                    values["name_search"] = f"%{name_val}%"
+
+        vendor_val = parse_filter_val(filters.get("vendor") or filters.get("vendor_id"))
+        if vendor_val:
+            if isinstance(vendor_val, (list, tuple)):
+                if len(vendor_val) == 2 and str(vendor_val[0]).upper() == "IN":
+                    vendor_val = vendor_val[1]
+                if isinstance(vendor_val, (list, tuple)):
+                    placeholders = ", ".join([f"%(v_{i})s" for i in range(len(vendor_val))])
+                    conditions.append(f"pur.vendor_id IN ({placeholders})")
+                    for i, v in enumerate(vendor_val):
+                        values[f"v_{i}"] = v
+                else:
+                    conditions.append("pur.vendor_id = %(vendor_id)s")
+                    values["vendor_id"] = str(vendor_val)
+            else:
+                v_str = str(vendor_val)
+                if "%" in v_str:
+                    conditions.append("pur.vendor_id LIKE %(vendor_id)s")
+                else:
+                    conditions.append("pur.vendor_id = %(vendor_id)s")
+                values["vendor_id"] = v_str
+
+        vendor_name_val = parse_filter_val(filters.get("vendor_name"))
+        if vendor_name_val:
+            if isinstance(vendor_name_val, (list, tuple)) and len(vendor_name_val) == 2:
+                vendor_name_val = vendor_name_val[1]
+            vname = str(vendor_name_val)
+            if not vname.startswith("%") and not vname.endswith("%"):
+                vname = f"%{vname}%"
+            conditions.append("pur.vendor_name LIKE %(vendor_name)s")
+            values["vendor_name"] = vname
+
+        bill_val = parse_filter_val(filters.get("bill_no"))
+        if bill_val:
+            if isinstance(bill_val, (list, tuple)) and len(bill_val) == 2:
+                bill_val = bill_val[1]
+            bstr = str(bill_val)
+            if not bstr.startswith("%") and not bstr.endswith("%"):
+                bstr = f"%{bstr}%"
+            conditions.append("pur.bill_no LIKE %(bill_no)s")
+            values["bill_no"] = bstr
+
+        bp_val = parse_filter_val(filters.get("business_person_name") or filters.get("business_person"))
+        if bp_val:
+            if isinstance(bp_val, (list, tuple)) and len(bp_val) == 2:
+                bp_val = bp_val[1]
+            bp_str = str(bp_val)
+            if "%" in bp_str:
+                conditions.append("pur.business_person_name LIKE %(bp_name)s")
+            else:
+                conditions.append("pur.business_person_name = %(bp_name)s")
+            values["bp_name"] = bp_str
+
+        if filters.get("gst_non_gst"):
+            if filters["gst_non_gst"] == "Non-GST":
+                conditions.append("pur.default_tax_type = 'Exempted'")
+            elif filters["gst_non_gst"] == "GST":
+                conditions.append("pur.default_tax_type != 'Exempted'")
+
+        if filters.get("purchase_status"):
+            conditions.append("pur.purchase_status = %(purchase_status)s")
+            values["purchase_status"] = filters["purchase_status"]
+
+    return conditions, values
+
+
+@frappe.whitelist()
+def get_sales_export_count(filters=None, names=None):
+    """Returns invoice count and item count for confirmation dialog before export."""
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+    if isinstance(names, str):
+        names = frappe.parse_json(names) or []
+
+    conditions, values = _build_sales_export_conditions(filters, names)
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     res = frappe.db.sql(f"""
@@ -3050,28 +3269,7 @@ def get_purchase_export_count(filters=None, names=None):
     if isinstance(names, str):
         names = frappe.parse_json(names) or []
 
-    conditions = []
-    values = {}
-
-    if names:
-        conditions.append("pur.name IN %(names)s")
-        values["names"] = tuple(names)
-    else:
-        if filters.get("from_date") and filters.get("to_date"):
-            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
-            values["from_date"] = filters.get("from_date")
-            values["to_date"] = filters.get("to_date")
-        elif filters.get("from_date"):
-            conditions.append("pur.bill_date >= %(from_date)s")
-            values["from_date"] = filters.get("from_date")
-        elif filters.get("to_date"):
-            conditions.append("pur.bill_date <= %(to_date)s")
-            values["to_date"] = filters.get("to_date")
-
-        if filters.get("vendor_id"):
-            conditions.append("pur.vendor_id = %(vendor_id)s")
-            values["vendor_id"] = filters.get("vendor_id")
-
+    conditions, values = _build_purchase_export_conditions(filters, names)
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     res = frappe.db.sql(f"""
@@ -3103,28 +3301,7 @@ def export_sales_itemized_excel(filters=None, names=None):
     if isinstance(names, str):
         names = frappe.parse_json(names) or []
 
-    conditions = []
-    values = {}
-
-    if names:
-        conditions.append("inv.name IN %(names)s")
-        values["names"] = tuple(names)
-    else:
-        if filters.get("from_date") and filters.get("to_date"):
-            conditions.append("inv.invoice_date BETWEEN %(from_date)s AND %(to_date)s")
-            values["from_date"] = filters.get("from_date")
-            values["to_date"] = filters.get("to_date")
-        elif filters.get("from_date"):
-            conditions.append("inv.invoice_date >= %(from_date)s")
-            values["from_date"] = filters.get("from_date")
-        elif filters.get("to_date"):
-            conditions.append("inv.invoice_date <= %(to_date)s")
-            values["to_date"] = filters.get("to_date")
-
-        if filters.get("customer_id"):
-            conditions.append("inv.customer_id = %(customer_id)s")
-            values["customer_id"] = filters.get("customer_id")
-
+    conditions, values = _build_sales_export_conditions(filters, names)
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     query = f"""
@@ -3137,7 +3314,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             inv.billing_name,
             inv.invoice_date,
             inv.po_no as dc_no,
-            inv.payment_terms,
+            COALESCE(pt.payment_terms, inv.payment_terms, '') as payment_terms,
             inv.po_date as dc_date,
             inv.due_date,
             inv.company_name,
@@ -3159,6 +3336,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             COALESCE(inv.balance_amount, 0) as balance_amount
         FROM `tabInvoice` inv
         LEFT JOIN `tabBusiness Person` bp ON bp.name = inv.business_person_name
+        LEFT JOIN `tabPayment Terms` pt ON pt.name = inv.payment_terms
         LEFT JOIN `tabInvoice Items` item_tb ON item_tb.parent = inv.name
         LEFT JOIN `tabItem` item ON item.name = item_tb.service
         {where_clause}
@@ -3311,6 +3489,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=26).alignment = right_align
             ws.cell(row=r_num, column=27).alignment = right_align
             ws.cell(row=r_num, column=28).alignment = right_align
+            ws.cell(row=r_num, column=29).alignment = right_align
 
             ws.cell(row=r_num, column=15).number_format = "#,##0.00"
             ws.cell(row=r_num, column=16).number_format = "₹#,##0.00"
@@ -3323,6 +3502,7 @@ def export_sales_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=26).number_format = "₹#,##0.00"
             ws.cell(row=r_num, column=27).number_format = "₹#,##0.00"
             ws.cell(row=r_num, column=28).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=29).number_format = "₹#,##0.00"
 
             for c_num in range(1, len(headers) + 1):
                 cell = ws.cell(row=r_num, column=c_num)
@@ -3381,28 +3561,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
     if isinstance(names, str):
         names = frappe.parse_json(names) or []
 
-    conditions = []
-    values = {}
-
-    if names:
-        conditions.append("pur.name IN %(names)s")
-        values["names"] = tuple(names)
-    else:
-        if filters.get("from_date") and filters.get("to_date"):
-            conditions.append("pur.bill_date BETWEEN %(from_date)s AND %(to_date)s")
-            values["from_date"] = filters.get("from_date")
-            values["to_date"] = filters.get("to_date")
-        elif filters.get("from_date"):
-            conditions.append("pur.bill_date >= %(from_date)s")
-            values["from_date"] = filters.get("from_date")
-        elif filters.get("to_date"):
-            conditions.append("pur.bill_date <= %(to_date)s")
-            values["to_date"] = filters.get("to_date")
-
-        if filters.get("vendor_id"):
-            conditions.append("pur.vendor_id = %(vendor_id)s")
-            values["vendor_id"] = filters.get("vendor_id")
-
+    conditions, values = _build_purchase_export_conditions(filters, names)
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     query = f"""
@@ -3413,7 +3572,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             pur.vendor_name,
             pur.bill_no,
             pur.bill_date,
-            pur.payment_terms,
+            COALESCE(pt.payment_terms, pur.payment_terms, '') as payment_terms,
             pur.due_date,
             pur.purchase_status,
             COALESCE(item.item_name, item_tb.service, '') as item_name,
@@ -3434,6 +3593,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             COALESCE(pur.balance_amount, 0) as balance_amount
         FROM `tabPurchase` pur
         LEFT JOIN `tabBusiness Person` bp ON bp.name = pur.business_person_name
+        LEFT JOIN `tabPayment Terms` pt ON pt.name = pur.payment_terms
         LEFT JOIN `tabPurchase Items` item_tb ON item_tb.parent = pur.name
         LEFT JOIN `tabItem` item ON item.name = item_tb.service
         {where_clause}
@@ -3577,6 +3737,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=23).alignment = right_align
             ws.cell(row=r_num, column=24).alignment = right_align
             ws.cell(row=r_num, column=25).alignment = right_align
+            ws.cell(row=r_num, column=26).alignment = right_align
 
             ws.cell(row=r_num, column=12).number_format = "#,##0.00"
             ws.cell(row=r_num, column=13).number_format = "₹#,##0.00"
@@ -3589,6 +3750,7 @@ def export_purchase_itemized_excel(filters=None, names=None):
             ws.cell(row=r_num, column=23).number_format = "₹#,##0.00"
             ws.cell(row=r_num, column=24).number_format = "₹#,##0.00"
             ws.cell(row=r_num, column=25).number_format = "₹#,##0.00"
+            ws.cell(row=r_num, column=26).number_format = "₹#,##0.00"
 
             for c_num in range(1, len(headers) + 1):
                 cell = ws.cell(row=r_num, column=c_num)
@@ -3630,3 +3792,308 @@ def export_purchase_itemized_excel(filters=None, names=None):
     frappe.response['filename'] = 'Purchase_Item_Details_Report.xlsx'
     frappe.response['filecontent'] = output.getvalue()
     frappe.response['type'] = 'binary'
+
+
+@frappe.whitelist()
+def get_sales_vs_purchase_export_count(filters=None):
+    """Returns row count for Sales vs Purchase export confirmation."""
+    from frappe.utils import flt
+    from company.company.report.sales_vs_purchase.sales_vs_purchase import execute
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    filters["page_length"] = 999999
+    filters["page"] = 1
+    filters["is_export"] = 1
+
+    columns, data, summary_data, chart, report_summary = execute(filters)
+    return {
+        "count": len(data) if data else 0
+    }
+
+
+@frappe.whitelist()
+def export_sales_vs_purchase_excel(filters=None):
+    """Exports Sales vs Purchase report along with Item Names and Quantities to formatted Excel."""
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    from frappe.utils import flt, getdate
+    from company.company.report.sales_vs_purchase.sales_vs_purchase import execute
+
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters) or {}
+
+    filters["page_length"] = 999999
+    filters["page"] = 1
+    filters["is_export"] = 1
+
+    columns, data, summary_data, chart, report_summary = execute(filters)
+
+    # -------------------------------------------------------------
+    # Batch fetch all Sales Items and Purchase Items
+    # -------------------------------------------------------------
+    inv_names = list(set([r.get("invoice_no") for r in (data or []) if r.get("invoice_no")]))
+    sales_items_by_inv = {}
+    if inv_names:
+        inv_items_raw = frappe.db.sql("""
+            SELECT 
+                inv_item.parent as inv_name,
+                COALESCE(item.item_name, inv_item.service, '') as item_name,
+                COALESCE(inv_item.quantity, 0) as quantity,
+                COALESCE(inv_item.price, 0) as price,
+                COALESCE(inv_item.sub_total, 0) as sub_total
+            FROM `tabInvoice Items` inv_item
+            LEFT JOIN `tabItem` item ON item.name = inv_item.service
+            WHERE inv_item.parent IN %s
+            ORDER BY inv_item.parent, inv_item.idx ASC
+        """, (tuple(inv_names),), as_dict=True)
+        for row_item in inv_items_raw:
+            inv_name = row_item.inv_name
+            if inv_name not in sales_items_by_inv:
+                sales_items_by_inv[inv_name] = []
+            sales_items_by_inv[inv_name].append(row_item)
+
+    pur_names = []
+    for r in (data or []):
+        p_nos = r.get("purchase_nos")
+        if p_nos:
+            for p in str(p_nos).split(","):
+                p_clean = p.strip()
+                if p_clean and p_clean != "-":
+                    pur_names.append(p_clean)
+
+    purchase_items_by_pur = {}
+    if pur_names:
+        pur_items_raw = frappe.db.sql("""
+            SELECT 
+                pur_item.parent as pur_name,
+                COALESCE(item.item_name, pur_item.service, '') as item_name,
+                COALESCE(pur_item.quantity, 0) as quantity,
+                COALESCE(pur_item.price, 0) as price,
+                COALESCE(pur_item.sub_total, 0) as sub_total
+            FROM `tabPurchase Items` pur_item
+            LEFT JOIN `tabItem` item ON item.name = pur_item.service
+            WHERE pur_item.parent IN %s
+            ORDER BY pur_item.parent, pur_item.idx ASC
+        """, (tuple(set(pur_names)),), as_dict=True)
+        for row_item in pur_items_raw:
+            pur_name = row_item.pur_name
+            if pur_name not in purchase_items_by_pur:
+                purchase_items_by_pur[pur_name] = []
+            purchase_items_by_pur[pur_name].append(row_item)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sales vs Purchase"
+
+    headers = [
+        "S.No", "Invoice No", "Inv Date", "Customer Name", "Location", "Status", "Cust. Opening Bal",
+        "Item Name", "Quantity (Qty)", "Price (Rate)", "Item Subtotal",
+        "Sales Amt (Excl. Tax)", "Tax Amount", "Sales Amt", "Advance Amt", "Received Amt", "Balance Amt",
+        "Sales vs Purchase",
+        "Purchase No", "Pur Date", "Vendor(s)", "Vendor Opening Bal",
+        "Pur Item Name", "Pur Qty", "Pur Rate", "Pur Item Subtotal",
+        "Pur Amt (Excl. Tax)", "Pur Tax Amount", "Purchase Amt", "Pur Advance Amt", "Paid Amt", "Pur Balance Amt",
+        "Profit", "Margin %",
+        "Sales BP", "Purchase BP"
+    ]
+
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    sep_fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
+    sep_font = Font(name="Calibri", size=10, bold=True, color="000000")
+    sep_align = Alignment(horizontal="center", vertical="center", textRotation=90)
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    ws.append(headers)
+    ws.row_dimensions[1].height = 24.1  # Fixed 0.85 CM header height
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.border = thin_border
+        if col_num == 18:
+            cell.font = sep_font
+            cell.fill = sep_fill
+            cell.alignment = sep_align
+        else:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_align
+
+    def format_excel_date(d_val):
+        if not d_val:
+            return "-"
+        try:
+            if isinstance(d_val, str):
+                d_val = getdate(d_val)
+            return d_val.strftime("%d-%m-%Y")
+        except Exception:
+            return str(d_val) if d_val else "-"
+
+    def format_excel_str(val):
+        if val is None or val == "" or str(val).strip() == "":
+            return "-"
+        return str(val).strip()
+
+    current_row = 2
+    for idx, row in enumerate(data or [], 1):
+        status = row.get("customer_status") or ""
+        if "<" in str(status):
+            if "NEW" in str(status): status = "NEW"
+            elif "OLD" in str(status): status = "OLD"
+
+        inv_no = row.get("invoice_no")
+        s_items = sales_items_by_inv.get(inv_no, [])
+
+        p_nos_str = row.get("purchase_nos") or ""
+        p_items = []
+        if p_nos_str and p_nos_str != "-":
+            for p_id in p_nos_str.split(","):
+                p_id_clean = p_id.strip()
+                if p_id_clean in purchase_items_by_pur:
+                    p_items.extend(purchase_items_by_pur[p_id_clean])
+
+        max_rows = max(len(s_items), len(p_items), 1)
+        start_row = current_row
+
+        for k in range(max_rows):
+            s_it = s_items[k] if k < len(s_items) else {}
+            p_it = p_items[k] if k < len(p_items) else {}
+
+            row_data = [
+                idx,
+                format_excel_str(inv_no),
+                format_excel_date(row.get("invoice_date")),
+                format_excel_str(row.get("customer_name")),
+                format_excel_str(row.get("location")),
+                format_excel_str(status),
+                flt(row.get("customer_opening_balance")),
+
+                format_excel_str(s_it.get("item_name")),
+                flt(s_it.get("quantity")) if "quantity" in s_it else 0.0,
+                flt(s_it.get("price")) if "price" in s_it else 0.0,
+                flt(s_it.get("sub_total")) if "sub_total" in s_it else 0.0,
+
+                flt(row.get("amount_exclusive")),
+                flt(row.get("total_tax_amount")),
+                flt(row.get("sales_amount")),
+                flt(row.get("advance_amount_paid")),
+                flt(row.get("received_amount")),
+                flt(row.get("balance_amount")),
+
+                "",
+
+                format_excel_str(row.get("purchase_nos")),
+                format_excel_date(row.get("purchase_dates")),
+                format_excel_str(row.get("vendor_names")),
+                flt(row.get("vendor_opening_balance")),
+
+                format_excel_str(p_it.get("item_name")),
+                flt(p_it.get("quantity")) if "quantity" in p_it else 0.0,
+                flt(p_it.get("price")) if "price" in p_it else 0.0,
+                flt(p_it.get("sub_total")) if "sub_total" in p_it else 0.0,
+
+                flt(row.get("purchase_amount_exclusive")),
+                flt(row.get("purchase_total_tax_amount")),
+                flt(row.get("purchase_amount")),
+                flt(row.get("purchase_advance_amount")),
+                flt(row.get("paid_amount")),
+                flt(row.get("purchase_balance_amount")),
+
+                flt(row.get("gross_profit")),
+                flt(row.get("margin_percent")),
+                format_excel_str(row.get("sales_business_person")),
+                format_excel_str(row.get("purchase_business_person"))
+            ]
+            ws.append(row_data)
+
+            r_num = current_row
+            for col_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=r_num, column=col_num)
+                cell.border = thin_border
+
+                if col_num == 18:
+                    cell.fill = sep_fill
+                    cell.font = sep_font
+                    cell.alignment = sep_align
+                elif col_num in [7, 10, 11, 12, 13, 14, 15, 16, 17, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33]:
+                    cell.number_format = "₹#,##0.00"
+                    cell.alignment = right_align
+                elif col_num in [9, 24]:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = right_align
+                elif col_num == 34:
+                    cell.number_format = '0.00"%"'
+                    cell.alignment = right_align
+                elif col_num in [1, 3, 6, 20]:
+                    cell.alignment = center_align
+                else:
+                    cell.alignment = left_align
+
+                if str(cell.value or "").strip() == "-":
+                    cell.alignment = center_align
+
+            current_row += 1
+
+        end_row = current_row - 1
+
+        # Merge invoice-level columns vertically if block has multiple item rows
+        if end_row > start_row:
+            invoice_level_cols = [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+            for col_idx in invoice_level_cols:
+                ws.merge_cells(start_row=start_row, start_column=col_idx, end_row=end_row, end_column=col_idx)
+
+        # Apply darker bottom border at the end of each invoice block
+        thick_bottom = Side(style='medium', color='000000')
+        black_side = Side(style='thin', color='000000')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=end_row, column=col_idx)
+            cell.border = Border(
+                left=cell.border.left if cell.border else black_side,
+                right=cell.border.right if cell.border else black_side,
+                top=cell.border.top if cell.border else black_side,
+                bottom=thick_bottom
+            )
+
+    # Merge Column 18 (Sales vs Purchase separator) vertically from Header Row 1 down to last data row
+    if current_row > 2:
+        ws.merge_cells(start_row=1, start_column=18, end_row=current_row - 1, end_column=18)
+
+        # Dynamically adjust data row heights ONLY (excluding header row 1) so total merged cell height reaches minimum 135pt
+        total_data_rows = current_row - 2
+        approx_total_height = 20.0 + (total_data_rows * 20.0)
+        min_required_height = 105.0
+
+        if total_data_rows > 0 and approx_total_height < min_required_height:
+            needed_extra_data_height = min_required_height - 20.0
+            height_per_data_row = max(20.0, needed_extra_data_height / total_data_rows)
+            for r_idx in range(2, current_row):
+                ws.row_dimensions[r_idx].height = height_per_data_row
+
+    for col in ws.columns:
+        col_letter = get_column_letter(col[0].column)
+        if col[0].column == 18:
+            ws.column_dimensions[col_letter].width = 6
+        else:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    frappe.response['filename'] = 'Sales_vs_Purchase_Report.xlsx'
+    frappe.response['filecontent'] = output.getvalue()
+    frappe.response['type'] = 'binary'
+

@@ -94,15 +94,47 @@ frappe.listview_settings['Purchase'] = {
             current_checked.forEach(n => combined_set.add(n));
             let selected_names = Array.from(combined_set);
 
-            let from_date = $('#purchase_from_date_input').val() ? frappe.datetime.user_to_str($('#purchase_from_date_input').val()) : null;
-            let to_date = $('#purchase_to_date_input').val() ? frappe.datetime.user_to_str($('#purchase_to_date_input').val()) : null;
-            let vendor_id = listview.page.fields_dict['vendor_id'] ? listview.page.fields_dict['vendor_id'].get_value() : null;
+            let filters = {};
 
-            let filters = {
-                from_date: from_date,
-                to_date: to_date,
-                vendor_id: vendor_id
-            };
+            // 1. Extract custom date inputs
+            if ($('#purchase_from_date_input').val()) {
+                filters.from_date = frappe.datetime.user_to_str($('#purchase_from_date_input').val());
+            }
+            if ($('#purchase_to_date_input').val()) {
+                filters.to_date = frappe.datetime.user_to_str($('#purchase_to_date_input').val());
+            }
+
+            // 2. Extract page fields_dict values
+            if (listview.page && listview.page.fields_dict) {
+                Object.keys(listview.page.fields_dict).forEach(fname => {
+                    let field = listview.page.fields_dict[fname];
+                    if (field && field.get_value && field.get_value()) {
+                        filters[fname] = field.get_value();
+                    }
+                });
+            }
+
+            // 3. Extract Filter Area filters
+            if (listview.filter_area && listview.filter_area.get) {
+                let flist = listview.filter_area.get();
+                (flist || []).forEach(f => {
+                    if (Array.isArray(f) && f.length >= 4) {
+                        let fname = f[1];
+                        let fval = f[3];
+                        if (fname && fval) {
+                            filters[fname] = fval;
+                        }
+                    }
+                });
+            }
+
+            // 4. Extract URL query parameters fallback
+            let url_params = frappe.utils.get_query_params();
+            Object.keys(url_params).forEach(k => {
+                if (k && url_params[k] && !filters[k]) {
+                    filters[k] = url_params[k];
+                }
+            });
 
             frappe.call({
                 method: 'company.company.api.get_purchase_export_count',
