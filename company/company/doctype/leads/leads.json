@@ -179,6 +179,7 @@
    "allow_in_quick_entry": 1,
    "fieldname": "business_person_name",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Business Person",
    "options": "Business Person",
    "reqd": 1
@@ -187,7 +188,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-20 11:24:49.268019",
+ "modified": "2026-09-01 14:12:24.934068",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Leads",

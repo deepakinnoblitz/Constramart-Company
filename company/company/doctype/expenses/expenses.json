@@ -92,6 +92,7 @@
    "fieldname": "business_person",
    "fieldtype": "Link",
    "hidden": 1,
+   "in_standard_filter": 1,
    "label": "Business Person",
    "options": "Business Person"
   },
@@ -103,7 +104,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 16:18:21.964202",
+ "modified": "2026-09-01 14:13:28.035693",
  "modified_by": "Administrator",
  "module": "Company",
  "name": "Expenses",
