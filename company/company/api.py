@@ -4069,13 +4069,13 @@ def export_sales_vs_purchase_excel(filters=None):
     if current_row > 2:
         ws.merge_cells(start_row=1, start_column=18, end_row=current_row - 1, end_column=18)
 
-        # Dynamically adjust data row heights ONLY (excluding header row 1) so total merged cell height reaches minimum 105pt for padding
+        # Dynamically adjust data row heights ONLY (excluding header row 1) so total merged cell height reaches minimum 135pt
         total_data_rows = current_row - 2
-        approx_total_height = 25.0 + (total_data_rows * 20.0)
-        min_required_height = 105.0
+        approx_total_height = 20.0 + (total_data_rows * 20.0)
+        min_required_height = 125.0
 
         if total_data_rows > 0 and approx_total_height < min_required_height:
-            needed_extra_data_height = min_required_height - 25.0
+            needed_extra_data_height = min_required_height - 20.0
             height_per_data_row = max(20.0, needed_extra_data_height / total_data_rows)
             for r_idx in range(2, current_row):
                 ws.row_dimensions[r_idx].height = height_per_data_row
